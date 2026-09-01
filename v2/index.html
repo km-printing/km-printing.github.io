@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Graph Generator v4.4</title>
+  <title>Graph Generator v4.5</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
   <style>
@@ -366,15 +366,27 @@ class GraphApp {
     this.ctx.scale(dpr, dpr);
     this.ctx.clearRect(0, 0, width, height);
 
-    this.drawGrid(width, height);
+    // 1. Draw Grid background and axis lines
+    this.drawGridLines(width, height);
+
+    // 2. Draw Data Best Fit Line
     if (document.getElementById('fdrawfit').checked && this.points.length >= 2) {
       this.drawFitLine();
     }
+
+    // 3. Draw Data Point Markers
     this.drawPoints();
+
+    // 4. Draw Custom Equation Plots
     this.drawCustomEquations();
+
+    // 5. Draw Axis Labels LAST so text/glow remains layered on top of all graphs
+    if (document.getElementById('fmarkaxes').checked) {
+      this.drawAxisLabels();
+    }
   }
 
-  drawGrid(w, h) {
+  drawGridLines(w, h) {
     const ctx = this.ctx;
     const gridW = this.NX * this.numpixel;
     const gridH = this.NY * this.numpixel;
@@ -420,58 +432,61 @@ class GraphApp {
       }
     }
     ctx.stroke();
+  }
 
-    if (document.getElementById('fmarkaxes').checked) {
-      ctx.font = '14px Arial';
+  drawAxisLabels() {
+    const ctx = this.ctx;
+    const gridH = this.NY * this.numpixel;
+
+    ctx.font = '14px Arial';
+    
+    const dpSetting = document.getElementById('fdpselect').value;
+    const dpX = dpSetting === 'auto' ? Math.max(this.getDP(this.DX), this.getDP(this.X0)) : parseInt(dpSetting);
+    const dpY = dpSetting === 'auto' ? Math.max(this.getDP(this.DY), this.getDP(this.Y0)) : parseInt(dpSetting);
+
+    const enableGlow = document.getElementById('ftextglow').checked;
+    const alignXZero = document.getElementById('falignxlabelzero').checked;
+
+    // Y-axis labels
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= this.NY; i++) {
+      const rawVal = this.Y0 + (this.NY - i) * this.DY;
+      const valStr = this.formatLabelNumber(rawVal, dpY);
+      const yPos = this.MY + i * this.numpixel + 4;
       
-      const dpSetting = document.getElementById('fdpselect').value;
-      const dpX = dpSetting === 'auto' ? Math.max(this.getDP(this.DX), this.getDP(this.X0)) : parseInt(dpSetting);
-      const dpY = dpSetting === 'auto' ? Math.max(this.getDP(this.DY), this.getDP(this.Y0)) : parseInt(dpSetting);
-
-      const enableGlow = document.getElementById('ftextglow').checked;
-      const alignXZero = document.getElementById('falignxlabelzero').checked;
-
-      // Y-axis labels
-      ctx.textAlign = 'right';
-      for (let i = 0; i <= this.NY; i++) {
-        const rawVal = this.Y0 + (this.NY - i) * this.DY;
-        const valStr = this.formatLabelNumber(rawVal, dpY);
-        const yPos = this.MY + i * this.numpixel + 4;
-        
-        if (enableGlow) {
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 3.5;
-          ctx.lineJoin = 'round';
-          ctx.strokeText(valStr, this.MX - 8, yPos);
-        }
-        ctx.fillStyle = '#000000';
-        ctx.fillText(valStr, this.MX - 8, yPos);
+      if (enableGlow) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3.5;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(valStr, this.MX - 8, yPos);
       }
+      ctx.fillStyle = '#000000';
+      ctx.fillText(valStr, this.MX - 8, yPos);
+    }
 
-      // X-axis label positioning (at y=0 if enabled and in range, or bottom)
-      const yZeroPos = this.ytoSY(0);
-      let xLabelY;
-      if (alignXZero && yZeroPos >= this.MY && yZeroPos <= this.MY + gridH) {
-        xLabelY = yZeroPos + 16;
-      } else {
-        xLabelY = this.MY + gridH + 20;
+    // X-axis label positioning (at y=0 if enabled and in range, or bottom)
+    const yZeroPos = this.ytoSY(0);
+    let xLabelY;
+    if (alignXZero && yZeroPos >= this.MY && yZeroPos <= this.MY + gridH) {
+      xLabelY = yZeroPos + 16;
+    } else {
+      xLabelY = this.MY + gridH + 20;
+    }
+
+    ctx.textAlign = 'center';
+    for (let i = 0; i <= this.NX; i++) {
+      const rawVal = this.X0 + i * this.DX;
+      const valStr = this.formatLabelNumber(rawVal, dpX);
+      const xPos = this.MX + i * this.numpixel;
+
+      if (enableGlow) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3.5;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(valStr, xPos, xLabelY);
       }
-
-      ctx.textAlign = 'center';
-      for (let i = 0; i <= this.NX; i++) {
-        const rawVal = this.X0 + i * this.DX;
-        const valStr = this.formatLabelNumber(rawVal, dpX);
-        const xPos = this.MX + i * this.numpixel;
-
-        if (enableGlow) {
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 3.5;
-          ctx.lineJoin = 'round';
-          ctx.strokeText(valStr, xPos, xLabelY);
-        }
-        ctx.fillStyle = '#000000';
-        ctx.fillText(valStr, xPos, xLabelY);
-      }
+      ctx.fillStyle = '#000000';
+      ctx.fillText(valStr, xPos, xLabelY);
     }
   }
 

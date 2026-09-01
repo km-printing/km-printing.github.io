@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Graph Generator v4.3</title>
+  <title>Graph Generator v4.4</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
   <style>
@@ -90,7 +90,7 @@
       <div class="grid-2" style="margin-top:4px;">
         <div>
           <div class="field-label">Initial X (X₀)</div>
-          <input type="text" id="fscalex0" value="0">
+          <input type="text" id="fscalex0" value="-3">
         </div>
         <div>
           <div class="field-label">Step X (DX)</div>
@@ -98,7 +98,7 @@
         </div>
         <div>
           <div class="field-label">Initial Y (Y₀)</div>
-          <input type="text" id="fscaley0" value="-3">
+          <input type="text" id="fscaley0" value="-2">
         </div>
         <div>
           <div class="field-label">Step Y (DY)</div>
@@ -124,6 +124,8 @@
         <label><input type="checkbox" id="fdrawaxes" checked> Draw Main Axes</label>
         <label><input type="checkbox" id="fdrawticks" checked> Draw Ticks</label>
         <label><input type="checkbox" id="fmarkaxes" checked> Mark Axes (Labels)</label>
+        <label><input type="checkbox" id="falignxlabelzero" checked> Align X Labels at Y = 0 Axis</label>
+        <label><input type="checkbox" id="ftextglow" checked> White Stroke / Glow Effect</label>
       </div>
     </div>
 
@@ -175,8 +177,8 @@ class GraphApp {
     this.MX = 50;
     this.MY = 50;
     
-    this.X0 = 0; this.DX = 1;
-    this.Y0 = -3; this.DY = 1;
+    this.X0 = -3; this.DX = 1;
+    this.Y0 = -2; this.DY = 1;
     this.points = [];
     this.fit = { LM: 0, LB: 0, r2: 0 };
 
@@ -308,10 +310,9 @@ class GraphApp {
       document.getElementById('fscaley0').value = this.Y0;
       document.getElementById('fscaledy').value = this.DY;
     } else {
-      // Fixed: explicitly check isNaN so 0 is recognized properly
-      this.X0 = this.parseNumberInput('fscalex0', -2);
+      this.X0 = this.parseNumberInput('fscalex0', -3);
       this.DX = this.parseNumberInput('fscaledx', 1);
-      this.Y0 = this.parseNumberInput('fscaley0', -3);
+      this.Y0 = this.parseNumberInput('fscaley0', -2);
       this.DY = this.parseNumberInput('fscaledy', 1);
       if (this.DX === 0) this.DX = 1;
       if (this.DY === 0) this.DY = 1;
@@ -421,19 +422,39 @@ class GraphApp {
     ctx.stroke();
 
     if (document.getElementById('fmarkaxes').checked) {
-      ctx.fillStyle = '#000';
       ctx.font = '14px Arial';
       
       const dpSetting = document.getElementById('fdpselect').value;
       const dpX = dpSetting === 'auto' ? Math.max(this.getDP(this.DX), this.getDP(this.X0)) : parseInt(dpSetting);
       const dpY = dpSetting === 'auto' ? Math.max(this.getDP(this.DY), this.getDP(this.Y0)) : parseInt(dpSetting);
 
+      const enableGlow = document.getElementById('ftextglow').checked;
+      const alignXZero = document.getElementById('falignxlabelzero').checked;
+
+      // Y-axis labels
       ctx.textAlign = 'right';
       for (let i = 0; i <= this.NY; i++) {
         const rawVal = this.Y0 + (this.NY - i) * this.DY;
         const valStr = this.formatLabelNumber(rawVal, dpY);
         const yPos = this.MY + i * this.numpixel + 4;
+        
+        if (enableGlow) {
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 3.5;
+          ctx.lineJoin = 'round';
+          ctx.strokeText(valStr, this.MX - 8, yPos);
+        }
+        ctx.fillStyle = '#000000';
         ctx.fillText(valStr, this.MX - 8, yPos);
+      }
+
+      // X-axis label positioning (at y=0 if enabled and in range, or bottom)
+      const yZeroPos = this.ytoSY(0);
+      let xLabelY;
+      if (alignXZero && yZeroPos >= this.MY && yZeroPos <= this.MY + gridH) {
+        xLabelY = yZeroPos + 16;
+      } else {
+        xLabelY = this.MY + gridH + 20;
       }
 
       ctx.textAlign = 'center';
@@ -441,7 +462,15 @@ class GraphApp {
         const rawVal = this.X0 + i * this.DX;
         const valStr = this.formatLabelNumber(rawVal, dpX);
         const xPos = this.MX + i * this.numpixel;
-        ctx.fillText(valStr, xPos, this.MY + gridH + 20);
+
+        if (enableGlow) {
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 3.5;
+          ctx.lineJoin = 'round';
+          ctx.strokeText(valStr, xPos, xLabelY);
+        }
+        ctx.fillStyle = '#000000';
+        ctx.fillText(valStr, xPos, xLabelY);
       }
     }
   }

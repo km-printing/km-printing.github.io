@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Graph Generator v4.5</title>
+  <title>Graph Generator v4.6</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
   <style>
@@ -123,9 +123,23 @@
         <label><input type="checkbox" id="fdrawmajorgridlines" checked> Draw Major Gridlines</label>
         <label><input type="checkbox" id="fdrawaxes" checked> Draw Main Axes</label>
         <label><input type="checkbox" id="fdrawticks" checked> Draw Ticks</label>
-        <label><input type="checkbox" id="fmarkaxes" checked> Mark Axes (Labels)</label>
+        <label><input type="checkbox" id="fdrawarrows" checked> Draw Axis Arrowheads</label>
+        <label><input type="checkbox" id="fmarkaxes" checked> Mark Axes (Tick Numbers)</label>
         <label><input type="checkbox" id="falignxlabelzero" checked> Align X Labels at Y = 0 Axis</label>
+        <label><input type="checkbox" id="falignylabelzero" checked> Align Y Labels at X = 0 Axis</label>
         <label><input type="checkbox" id="ftextglow" checked> White Stroke / Glow Effect</label>
+        <label><input type="checkbox" id="fshowaxeslabels" checked> Show Axis Name Labels (Draggable)</label>
+      </div>
+
+      <div class="grid-2" style="margin-top: 6px;">
+        <div>
+          <div class="field-label">X Axis Name</div>
+          <input type="text" id="fxaxislabel" value="x">
+        </div>
+        <div>
+          <div class="field-label">Y Axis Name</div>
+          <input type="text" id="fyaxislabel" value="y">
+        </div>
       </div>
     </div>
 
@@ -182,6 +196,12 @@ class GraphApp {
     this.points = [];
     this.fit = { LM: 0, LB: 0, r2: 0 };
 
+    // Custom Draggable Label Positions
+    this.xNamePos = null;
+    this.yNamePos = null;
+    this.draggingTarget = null; // 'x' | 'y' | null
+    this.dragOffset = { x: 0, y: 0 };
+
     this.initEvents();
     this.addEquationRow('sin(pi * x)', '#2563eb');
     this.onConfigChange();
@@ -214,6 +234,71 @@ class GraphApp {
     });
 
     document.getElementById('downloadpng').addEventListener('click', () => this.exportPNG());
+
+    // Canvas Dragging Events for Axis Names
+    this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+    window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+    window.addEventListener('mouseup', () => this.handleMouseUp());
+  }
+
+  getMousePos(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  }
+
+  handleMouseDown(e) {
+    if (!document.getElementById('fshowaxeslabels').checked) return;
+    const m = this.getMousePos(e);
+
+    const hitRadius = 25;
+    if (this.xNamePos && Math.hypot(m.x - this.xNamePos.x, m.y - this.xNamePos.y) < hitRadius) {
+      this.draggingTarget = 'x';
+      this.dragOffset = { x: m.x - this.xNamePos.x, y: m.y - this.xNamePos.y };
+      this.canvas.style.cursor = 'grabbing';
+    } else if (this.yNamePos && Math.hypot(m.x - this.yNamePos.x, m.y - this.yNamePos.y) < hitRadius) {
+      this.draggingTarget = 'y';
+      this.dragOffset = { x: m.x - this.yNamePos.x, y: m.y - this.yNamePos.y };
+      this.canvas.style.cursor = 'grabbing';
+    }
+  }
+
+  handleMouseMove(e) {
+    const m = this.getMousePos(e);
+
+    if (this.draggingTarget) {
+      if (this.draggingTarget === 'x') {
+        this.xNamePos = { x: m.x - this.dragOffset.x, y: m.y - this.dragOffset.y };
+      } else if (this.draggingTarget === 'y') {
+        this.yNamePos = { x: m.x - this.dragOffset.x, y: m.y - this.dragOffset.y };
+      }
+      this.render();
+      return;
+    }
+
+    // Hover effect
+    if (document.getElementById('fshowaxeslabels').checked) {
+      const hitRadius = 20;
+      const overX = this.xNamePos && Math.hypot(m.x - this.xNamePos.x, m.y - this.xNamePos.y) < hitRadius;
+      const overY = this.yNamePos && Math.hypot(m.x - this.yNamePos.x, m.y - this.yNamePos.y) < hitRadius;
+
+      if (overX || overY) {
+        this.canvas.style.cursor = 'grab';
+      } else {
+        this.canvas.style.cursor = 'default';
+      }
+    } else {
+      this.canvas.style.cursor = 'default';
+    }
+  }
+
+  handleMouseUp() {
+    if (this.draggingTarget) {
+      this.draggingTarget = null;
+      this.canvas.style.cursor = 'grab';
+    }
   }
 
   addEquationRow(defaultEq = '', defaultColor = '#2563eb') {
@@ -366,7 +451,7 @@ class GraphApp {
     this.ctx.scale(dpr, dpr);
     this.ctx.clearRect(0, 0, width, height);
 
-    // 1. Draw Grid background and axis lines
+    // 1. Draw Grid background and axis lines with arrowheads
     this.drawGridLines(width, height);
 
     // 2. Draw Data Best Fit Line
@@ -380,10 +465,31 @@ class GraphApp {
     // 4. Draw Custom Equation Plots
     this.drawCustomEquations();
 
-    // 5. Draw Axis Labels LAST so text/glow remains layered on top of all graphs
+    // 5. Draw Axis Tick Number Labels
     if (document.getElementById('fmarkaxes').checked) {
       this.drawAxisLabels();
     }
+
+    // 6. Draw Draggable Axis Name Labels (Top Layer)
+    if (document.getElementById('fshowaxeslabels').checked) {
+      this.drawAxisNameLabels();
+    }
+  }
+
+  drawArrowhead(x, y, angle) {
+    const ctx = this.ctx;
+    const size = 9;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-size, -size / 2);
+    ctx.lineTo(-size, size / 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   }
 
   drawGridLines(w, h) {
@@ -432,10 +538,27 @@ class GraphApp {
       }
     }
     ctx.stroke();
+
+    // Draw Arrowheads if enabled
+    if (document.getElementById('fdrawarrows').checked) {
+      const yZeroPos = this.ytoSY(0);
+      const xZeroPos = this.xtoSX(0);
+
+      // X-Axis Arrowhead
+      let xArrowY = (yZeroPos >= this.MY && yZeroPos <= this.MY + gridH) ? yZeroPos : this.MY + gridH;
+      let xArrowX = this.MX + gridW;
+      this.drawArrowhead(xArrowX, xArrowY, 0); // Point Right
+
+      // Y-Axis Arrowhead
+      let yArrowX = (xZeroPos >= this.MX && xZeroPos <= this.MX + gridW) ? xZeroPos : this.MX;
+      let yArrowY = this.MY;
+      this.drawArrowhead(yArrowX, yArrowY, -Math.PI / 2); // Point Up
+    }
   }
 
   drawAxisLabels() {
     const ctx = this.ctx;
+    const gridW = this.NX * this.numpixel;
     const gridH = this.NY * this.numpixel;
 
     ctx.font = '14px Arial';
@@ -446,8 +569,19 @@ class GraphApp {
 
     const enableGlow = document.getElementById('ftextglow').checked;
     const alignXZero = document.getElementById('falignxlabelzero').checked;
+    const alignYZero = document.getElementById('falignylabelzero').checked;
 
-    // Y-axis labels
+    const xZeroPos = this.xtoSX(0);
+    const yZeroPos = this.ytoSY(0);
+
+    // Y-axis labels alignment
+    let yLabelX;
+    if (alignYZero && xZeroPos >= this.MX && xZeroPos <= this.MX + gridW) {
+      yLabelX = xZeroPos - 8;
+    } else {
+      yLabelX = this.MX - 8;
+    }
+
     ctx.textAlign = 'right';
     for (let i = 0; i <= this.NY; i++) {
       const rawVal = this.Y0 + (this.NY - i) * this.DY;
@@ -458,14 +592,13 @@ class GraphApp {
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 3.5;
         ctx.lineJoin = 'round';
-        ctx.strokeText(valStr, this.MX - 8, yPos);
+        ctx.strokeText(valStr, yLabelX, yPos);
       }
       ctx.fillStyle = '#000000';
-      ctx.fillText(valStr, this.MX - 8, yPos);
+      ctx.fillText(valStr, yLabelX, yPos);
     }
 
-    // X-axis label positioning (at y=0 if enabled and in range, or bottom)
-    const yZeroPos = this.ytoSY(0);
+    // X-axis label positioning
     let xLabelY;
     if (alignXZero && yZeroPos >= this.MY && yZeroPos <= this.MY + gridH) {
       xLabelY = yZeroPos + 16;
@@ -488,6 +621,52 @@ class GraphApp {
       ctx.fillStyle = '#000000';
       ctx.fillText(valStr, xPos, xLabelY);
     }
+  }
+
+  drawAxisNameLabels() {
+    const ctx = this.ctx;
+    const gridW = this.NX * this.numpixel;
+    const gridH = this.NY * this.numpixel;
+
+    const xLabelText = document.getElementById('fxaxislabel').value || 'x';
+    const yLabelText = document.getElementById('fyaxislabel').value || 'y';
+
+    const yZeroPos = this.ytoSY(0);
+    const xZeroPos = this.xtoSX(0);
+
+    // Set initial positions relative to arrowheads if not dragged manually
+    const defaultXArrowY = (yZeroPos >= this.MY && yZeroPos <= this.MY + gridH) ? yZeroPos : this.MY + gridH;
+    const defaultXArrowX = this.MX + gridW;
+    const defaultYArrowX = (xZeroPos >= this.MX && xZeroPos <= this.MX + gridW) ? xZeroPos : this.MX;
+    const defaultYArrowY = this.MY;
+
+    if (!this.xNamePos) this.xNamePos = { x: defaultXArrowX + 18, y: defaultXArrowY + 4 };
+    if (!this.yNamePos) this.yNamePos = { x: defaultYArrowX, y: defaultYArrowY - 14 };
+
+    const enableGlow = document.getElementById('ftextglow').checked;
+
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+
+    // Draw X Axis Name Label
+    if (enableGlow) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      ctx.lineJoin = 'round';
+      ctx.strokeText(xLabelText, this.xNamePos.x, this.xNamePos.y);
+    }
+    ctx.fillStyle = '#000000';
+    ctx.fillText(xLabelText, this.xNamePos.x, this.xNamePos.y);
+
+    // Draw Y Axis Name Label
+    if (enableGlow) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      ctx.lineJoin = 'round';
+      ctx.strokeText(yLabelText, this.yNamePos.x, this.yNamePos.y);
+    }
+    ctx.fillStyle = '#000000';
+    ctx.fillText(yLabelText, this.yNamePos.x, this.yNamePos.y);
   }
 
   drawPoints() {

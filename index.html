@@ -1,215 +1,580 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<title>Graph Generator v3.01</title>
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<link rel="stylesheet" href="home.css"/>
-	<script src="js/jquery-2.2.4.min.js"></script>
-	<script src="js/math.min.js"></script>
-	<script src="js/canvas2svg.js"></script>
-	<script src="home.js"></script>
+  <meta charset="UTF-8">
+  <title>Graph Generator v4.5</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { display: flex; height: 100vh; background: #f4f6f9; color: #333; }
+    #app { display: grid; grid-template-columns: 380px 1fr; width: 100vw; height: 100vh; }
+    
+    .sidebar { background: #ffffff; border-right: 1px solid #cbd5e1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; }
+    .card-title { font-weight: 700; font-size: 0.8rem; text-transform: uppercase; color: #475569; margin-bottom: 8px; letter-spacing: 0.5px; }
+    
+    label { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-bottom: 4px; cursor: pointer; color: #1e293b; }
+    .field-label { font-size: 0.75rem; font-weight: 600; color: #64748b; margin-top: 4px; }
+    input[type="text"], input[type="number"], select { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem; background: #fff; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+    th, td { border: 1px solid #cbd5e1; padding: 2px; text-align: center; }
+    th { background: #d3e1f9; font-size: 0.8rem; color: #1e293b; font-weight: 600; }
+    td input { border: none; text-align: center; width: 100%; outline: none; background: transparent; font-size: 0.85rem; }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 7px 12px; border-radius: 4px; border: none; background: #2563eb; color: #fff; font-weight: 500; font-size: 0.85rem; cursor: pointer; width: 100%; margin-top: 4px; }
+    .btn:hover { background: #1d4ed8; }
+    .btn-secondary { background: #64748b; }
+    .btn-secondary:hover { background: #475569; }
+    .btn-icon-danger { background: #ef4444; color: white; border: none; border-radius: 4px; width: 28px; height: 28px; cursor: pointer; font-weight: bold; }
+    .btn-icon-danger:hover { background: #dc2626; }
+
+    .eq-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .eq-row input[type="text"] { flex: 1; }
+    .eq-row select { width: 85px; }
+
+    .syntax-help { font-size: 0.75rem; color: #64748b; margin-top: 6px; line-height: 1.4; }
+    .syntax-help code { background: #e2e8f0; padding: 1px 4px; border-radius: 3px; color: #0f172a; font-family: monospace; }
+    
+    .stage { display: flex; align-items: center; justify-content: center; padding: 20px; overflow: auto; background: #e2e8f0; }
+    .canvas-container { background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 4px; padding: 12px; }
+    canvas { display: block; }
+  </style>
 </head>
 <body>
 
-<div id="tablepanel">
+<div id="app">
+  <div class="sidebar">
+    <div class="card">
+      <div class="card-title">Graph Dimensions</div>
+      <select id="fgraphsize">
+        <option value="6x4">Small Grid (4 × 6 Squares)</option>
+        <option value="4x6" selected>Standard Grid (6 × 4 Squares)</option>
+        <option value="12x8">Large Grid (8 × 12 Squares)</option>
+        <option value="custom">Custom Dimensions</option>
+      </select>
+      <div class="grid-2" style="margin-top: 6px;">
+        <div>
+          <div class="field-label">X Grid Squares</div>
+          <input type="number" id="fgraphsizex" value="6">
+        </div>
+        <div>
+          <div class="field-label">Y Grid Squares</div>
+          <input type="number" id="fgraphsizey" value="4">
+        </div>
+      </div>
+    </div>
 
-	<div class="boxbox" id="sizebox">
-		<div class="boxhead" style="font-size:14px;">Graph size: <select id="fgraphsize">
-				<option value="1">Small 6x4</option>
-				<option value="2">Small 4x6</option>
-				<option value="3">Big 12x8</option>
-				<option value="22">2x2</option>
-				<option value="23">2x3</option>
-				<option value="24">2x4</option>
-				<option value="25">2x5</option>
-				<option value="26">2x6</option>
-				<option value="28">2x8</option>
-				<option value="32">3x2</option>
-				<option value="33">3x3</option>
-				<option value="34">3x4</option>
-				<option value="35">3x5</option>
-				<option value="36">3x6</option>
-				<option value="42">4x2</option>
-				<option value="43">4x3</option>
-				<option value="44">4x4</option>
-				<option value="45">4x5</option>
-				<option value="46">4x6</option>
-				<option value="52">5x2</option>
-				<option value="53">5x3</option>
-				<option value="54">5x4</option>
-				<option value="55">5x5</option>
-				<option value="56">5x6</option>
-				
-				<option value="86">8x6</option>
-				<option value="68">6x8</option>
-			</select>
-		</div>
-	</div>
-<div class="boxbox" id="fgraphsizecustom">
-		<div style="margin: 0px 0 0 0">
-			<input type="checkbox" id="fgraphsizecustomise"> Customised graph size
-		</div>
-	</div>
-	<div class="boxbox">
-			<div class="sizeboxx1"># of x-squares:</div>
-			<div class="sizeboxx2"><input class="boxhead" type="text" id="fgraphsizex" value=""></div>
-			<div class="sizeboxy1"># of y-squares:</div>
-			<div class="sizeboxy2"><input class="boxhead" type="text" id="fgraphsizey" value=""></div>
-			<div class="spacer"></div>
-	</div>
+    <div class="card">
+      <div class="card-title">Data Points (Optional)</div>
+      <table id="datatable">
+        <thead><tr><th>X</th><th>Y</th></tr></thead>
+        <tbody>
+          <tr><td><input class="dx" value=""></td><td><input class="dy" value=""></td></tr>
+          <tr><td><input class="dx" value=""></td><td><input class="dy" value=""></td></tr>
+          <tr><td><input class="dx" value=""></td><td><input class="dy" value=""></td></tr>
+        </tbody>
+      </table>
+      <div class="grid-2" style="margin-top: 6px;">
+        <button class="btn btn-secondary" id="addrow">+ Add Row</button>
+        <button class="btn btn-secondary" id="cleardata">Clear Data</button>
+      </div>
+    </div>
 
-	<br>
+    <div class="card">
+      <div class="card-title">Axes, Scale & Labels</div>
+      <label><input type="checkbox" id="fautoscale"> Auto Scale Range</label>
+      
+      <div class="grid-2" style="margin-top:4px;">
+        <div>
+          <div class="field-label">Initial X (X₀)</div>
+          <input type="text" id="fscalex0" value="-3">
+        </div>
+        <div>
+          <div class="field-label">Step X (DX)</div>
+          <input type="text" id="fscaledx" value="1">
+        </div>
+        <div>
+          <div class="field-label">Initial Y (Y₀)</div>
+          <input type="text" id="fscaley0" value="-2">
+        </div>
+        <div>
+          <div class="field-label">Step Y (DY)</div>
+          <input type="text" id="fscaledy" value="1">
+        </div>
+      </div>
 
-<form id="form1" name="form1" action="http://www.1rox.com/mjc/graph/">
-<input type="hidden" name="act" value="submit">
-<input type="hidden" name="activity" value="1">
-<table id="tabledata" border="1" bordercolor="#555" style="border-collapse:collapse">
-    <tbody><tr align="center" bgcolor="#d3e1f9">
-        <th>x</th>
-        <th>y</th>
-    </tr>
-    <tr align="center">
-        <td><input class="datavalue" type="text" id="tb11" name="tb11" value="" maxlength="8"></td>
-        <td><input class="datavalue" type="text" id="tb12" name="tb12" value="" maxlength="8"></td>
-    </tr>
-    <tr align="center">
-        <td><input class="datavalue" type="text" id="tb21" name="tb21" value="" maxlength="8"></td>
-        <td><input class="datavalue" type="text" id="tb22" name="tb22" value="" maxlength="8"></td>
-    </tr>
-    <tr align="center">
-        <td><input class="datavalue" type="text" id="tb31" name="tb31" value="" maxlength="8"></td>
-        <td><input class="datavalue" type="text" id="tb32" name="tb32" value="" maxlength="8"></td>
-    </tr>
-    <tr align="center">
-        <td><input class="datavalue" type="text" id="tb41" name="tb41" value="" maxlength="8"></td>
-        <td><input class="datavalue" type="text" id="tb42" name="tb42" value="" maxlength="8"></td>
-    </tr>
-    <tr align="center">
-        <td><input class="datavalue" type="text" id="tb51" name="tb51" value="" maxlength="8"></td>
-        <td><input class="datavalue" type="text" id="tb52" name="tb52" value="" maxlength="8"></td>
-    </tr>
-    <tr align="center">
-        <td><input class="datavalue" type="text" id="tb61" name="tb61" value="" maxlength="8"></td>
-        <td><input class="datavalue" type="text" id="tb62" name="tb62" value="" maxlength="8"></td>
-    </tr><tr align="center">
-        <td><input class="datavalue" type="text" id="tb71" name="tb71" value="" maxlength="8"></td>
-        <td><input class="datavalue" type="text" id="tb72" name="tb72" value="" maxlength="8"></td>
-    </tr><tr align="center">
-        <td><input class="datavalue" type="text" id="tb81" name="tb81" value="" maxlength="8"></td>
-        <td><input class="datavalue" type="text" id="tb82" name="tb82" value="" maxlength="8"></td>
-    </tr>
-</tbody></table>
-</form>
+      <div style="margin-top: 10px;">
+        <div class="field-label">Axis Label Precision</div>
+        <select id="fdpselect">
+          <option value="auto" selected>Auto Precision</option>
+          <option value="0">0 Decimal Places (e.g. 1)</option>
+          <option value="1">1 Decimal Place (e.g. 1.0)</option>
+          <option value="2">2 Decimal Places (e.g. 1.00)</option>
+          <option value="3">3 Decimal Places (e.g. 1.000)</option>
+          <option value="4">4 Decimal Places (e.g. 1.0000)</option>
+        </select>
+      </div>
 
-	<div class="boxbox" id="plotbox">
-		<div style="margin: 0px 0 0 0">
-			<input type="checkbox" id="fplotpoints" checked=""> Plot points
-		</div>
-	</div>
+      <div style="margin-top:8px;">
+        <label><input type="checkbox" id="fdrawminorgridlines" checked> Draw Minor Gridlines</label>
+        <label><input type="checkbox" id="fdrawmajorgridlines" checked> Draw Major Gridlines</label>
+        <label><input type="checkbox" id="fdrawaxes" checked> Draw Main Axes</label>
+        <label><input type="checkbox" id="fdrawticks" checked> Draw Ticks</label>
+        <label><input type="checkbox" id="fmarkaxes" checked> Mark Axes (Labels)</label>
+        <label><input type="checkbox" id="falignxlabelzero" checked> Align X Labels at Y = 0 Axis</label>
+        <label><input type="checkbox" id="ftextglow" checked> White Stroke / Glow Effect</label>
+      </div>
+    </div>
 
-	<div class="boxbox" id="scalebox">
-		<div class="boxhead">Axes:</div>
-		<div>
-			<input type="checkbox" id="fautoscale" checked=""> Auto scale
-		</div>
-		<div class="scalerow">
-			<div class="scalec1">x0:</div>
-			<div class="scalec2"><input class="scalevalue" type="text" id="fscalex0" value="-2" readonly=""></div>
-			<div class="scalec1">dx:</div>
-			<div class="scalec2"><input class="scalevalue" type="text" id="fscaledx" value="1" readonly=""></div>
-			<div class="spacer"></div>
-		</div>
-		<div class="scalerow">
-			<div class="scalec1">y0:</div>
-			<div class="scalec2"><input class="scalevalue" type="text" id="fscaley0" value="-3" readonly=""></div>
-			<div class="scalec1">dy:</div>
-			<div class="scalec2"><input class="scalevalue" type="text" id="fscaledy" value="1" readonly=""></div>
-			<div class="spacer"></div>
-		</div>
-		<div style="margin: 3px 0 0 0">
-			<input type="checkbox" id="fdrawminorgridlines" checked=""> Draw minor gridlines
-		</div>
-		<div style="margin: 3px 0 0 0">
-			<input type="checkbox" id="fdrawmajorgridlines" checked=""> Draw major gridlines
-		</div>
-		<div style="margin: 3px 0 0 0">
-			<input type="checkbox" id="fdrawaxes" checked=""> Draw axes
-		</div>
-		<div style="margin: 3px 0 0 0">
-			<input type="checkbox" id="fdrawaxesarrow"> Draw axes arrow
-		</div>
-		<div style="margin: 3px 0 0 0">
-			<input type="checkbox" id="fdrawticks" checked=""> Draw ticks
-		</div>
-		<div style="margin: 3px 0 0 0">
-			<input type="checkbox" id="fmarkaxes" checked=""> Mark axes
-		</div>
-	</div>
+    <div class="card">
+      <div class="card-title">Custom Function Plots</div>
+      <div id="equation-list"></div>
+      <button class="btn btn-secondary" id="addequation">+ Add Function Plot</button>
+      <div class="syntax-help">
+        Syntax Examples:<br>
+        • Pi & Constants: <code>sin(pi * x)</code>, <code>2 * pi * x</code>, <code>e^(-x)</code><br>
+        • Trig: <code>sin(x)</code>, <code>cos(2*x)</code>, <code>tan(x/4)</code><br>
+        • Polynomial: <code>x^2 - 4</code>, <code>0.5*x + 1</code><br>
+        • Roots/Logs: <code>sqrt(x)</code>, <code>log(x)</code>
+      </div>
+    </div>
 
-	<div class="boxbox" id="zoombox">
-		<div class="boxhead">Zoom: <span id="zoomspan">100%</span></div>
-		<div class="slidecontainer">
-		<input type="range" min="-5" max="5" value="0" step="1" class="slider" id="fzoomslider">
-		</div>
-	</div>
+    <div class="card">
+      <div class="card-title">Curve Fitting (Data Points)</div>
+      <select id="ffittype">
+        <option value="1">Linear: y = mx + c</option>
+        <option value="2">Power: y = kx^n</option>
+        <option value="3">Exponential: y = ke^(nx)</option>
+        <option value="4">Logarithmic: y = k ln x + b</option>
+      </select>
+      <div style="margin-top:6px;">
+        <label><input type="checkbox" id="fdrawfit" checked> Draw Best Fit Line</label>
+        <label><input type="checkbox" id="fshowequation" checked> Show Fit Equation Text</label>
+      </div>
+    </div>
 
-	<div class="boxbox" id="fitbox">
-		<div class="boxhead">Fit:</div>
-		<div>
-			<select id="ffittype">
-				<option value="1">Linear: y = mx + c</option>
-				<option value="2">Curve: y = kx^n</option>
-				<option value="3">Curve: y = ke^(nx)</option>
-				<option value="4">Curve: y = k ln x + b</option>
-				<option value="21">Curve: y = ax&sup2; + bx + c</option>
-				<option value="31">Curve: y = ax&sup3;+bx&sup2;+cx+d</option>
-			</select>
-		</div>
-		<div style="margin: 3px 0 0 0">
-			<input type="checkbox" id="fshowequation" checked=""> Show equation
-		</div>
-		<div style="margin: 0px 0 0 0">
-			<input type="checkbox" id="fdrawfit" checked=""> Draw best fit line
-		</div>
-		<div style="margin: 0px 0 0 0">
-			<input type="checkbox" id="fdrawtriangle" checked=""> Draw triangle
-		</div>
-		<div id="fitanswer"></div>
-	</div>
+    <button class="btn" id="downloadpng">Download High-Res PNG</button>
+  </div>
 
-	<div class="boxbox" id="drawEq">
-		<div>
-			<input type="checkbox" id="fdrawequation"> Draw equation? E.g. y=Math.sin(x)
-		</div>
-		<div style="margin: 3px 0 0 0">
-			<input class="boxhead" type="text" id="drawEq1" name="drawEq1" value="">
-		</div>
-	</div>
-
-	<div class="boxbox" id="downloadbox">
-		<a id="download" href="#">Download graph as picture</a>
-	</div>
-	
-	<div class="boxbox" id="downloadsvgbox">
-		<a id="downloadsvg" href="#">Download graph as SVG</a>
-	</div>
-
-	<!--<br/><div class="boxbox">
-		<a href="vers/">Old versions</a>
-	</div>-->
-
+  <div class="stage">
+    <div class="canvas-container">
+      <canvas id="canvas"></canvas>
+    </div>
+  </div>
 </div>
 
-<div id="graphpanel">
+<script>
+class GraphApp {
+  constructor() {
+    this.canvas = document.getElementById('canvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.NX = 6;
+    this.NY = 4;
+    this.numpixel = 60; 
+    this.MX = 50;
+    this.MY = 50;
+    
+    this.X0 = -3; this.DX = 1;
+    this.Y0 = -2; this.DY = 1;
+    this.points = [];
+    this.fit = { LM: 0, LB: 0, r2: 0 };
 
-	<div id="graphcontainer">
+    this.initEvents();
+    this.addEquationRow('sin(pi * x)', '#2563eb');
+    this.onConfigChange();
+  }
 
-		<canvas id="canvas" xwidth="500" xheight="700" width="500" height="700"></canvas>
+  initEvents() {
+    document.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('input', () => this.onConfigChange());
+      el.addEventListener('change', () => this.onConfigChange());
+    });
 
-	</div>
+    document.getElementById('addrow').addEventListener('click', () => {
+      const tbody = document.querySelector('#datatable tbody');
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td><input class="dx"></td><td><input class="dy"></td>';
+      tbody.appendChild(tr);
+      tr.querySelectorAll('input').forEach(i => {
+        i.addEventListener('input', () => this.onConfigChange());
+      });
+    });
 
-</div>
+    document.getElementById('cleardata').addEventListener('click', () => {
+      document.querySelectorAll('#datatable input').forEach(i => i.value = '');
+      this.onConfigChange();
+    });
 
-<div id="output"></div></body>
+    document.getElementById('addequation').addEventListener('click', () => {
+      this.addEquationRow('cos(pi * x)', '#dc2626');
+      this.onConfigChange();
+    });
+
+    document.getElementById('downloadpng').addEventListener('click', () => this.exportPNG());
+  }
+
+  addEquationRow(defaultEq = '', defaultColor = '#2563eb') {
+    const container = document.getElementById('equation-list');
+    const row = document.createElement('div');
+    row.className = 'eq-row';
+    row.innerHTML = `
+      <input type="checkbox" class="eq-enable" checked>
+      <input type="text" class="eq-input" value="${defaultEq}" placeholder="e.g. sin(pi*x)">
+      <select class="eq-color">
+        <option value="#2563eb" ${defaultColor === '#2563eb' ? 'selected' : ''}>Blue</option>
+        <option value="#dc2626" ${defaultColor === '#dc2626' ? 'selected' : ''}>Red</option>
+        <option value="#059669" ${defaultColor === '#059669' ? 'selected' : ''}>Green</option>
+        <option value="#000000" ${defaultColor === '#000000' ? 'selected' : ''}>Black</option>
+        <option value="#9333ea" ${defaultColor === '#9333ea' ? 'selected' : ''}>Purple</option>
+        <option value="#ea580c" ${defaultColor === '#ea580c' ? 'selected' : ''}>Orange</option>
+      </select>
+      <button class="btn-icon-danger btn-remove">&times;</button>
+    `;
+
+    row.querySelector('.btn-remove').addEventListener('click', () => {
+      row.remove();
+      this.onConfigChange();
+    });
+
+    row.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('input', () => this.onConfigChange());
+      el.addEventListener('change', () => this.onConfigChange());
+    });
+
+    container.appendChild(row);
+  }
+
+  parseNumberInput(id, fallback) {
+    const val = parseFloat(document.getElementById(id).value);
+    return isNaN(val) ? fallback : val;
+  }
+
+  onConfigChange() {
+    const sizeVal = document.getElementById('fgraphsize').value;
+    if (sizeVal !== 'custom') {
+      const [x, y] = sizeVal.split('x').map(Number);
+      this.NX = x; this.NY = y;
+      document.getElementById('fgraphsizex').value = x;
+      document.getElementById('fgraphsizey').value = y;
+    } else {
+      this.NX = parseInt(document.getElementById('fgraphsizex').value) || 6;
+      this.NY = parseInt(document.getElementById('fgraphsizey').value) || 4;
+    }
+
+    const isAuto = document.getElementById('fautoscale').checked;
+    document.getElementById('fscalex0').readOnly = isAuto;
+    document.getElementById('fscaledx').readOnly = isAuto;
+    document.getElementById('fscaley0').readOnly = isAuto;
+    document.getElementById('fscaledy').readOnly = isAuto;
+
+    this.updateData();
+    this.render();
+  }
+
+  updateData() {
+    const rows = document.querySelectorAll('#datatable tbody tr');
+    this.points = [];
+    rows.forEach(r => {
+      const xVal = r.querySelector('.dx').value.trim();
+      const yVal = r.querySelector('.dy').value.trim();
+      if (xVal !== '' && yVal !== '') {
+        const x = parseFloat(xVal);
+        const y = parseFloat(yVal);
+        if (!isNaN(x) && !isNaN(y)) this.points.push([x, y]);
+      }
+    });
+
+    if (document.getElementById('fautoscale').checked) {
+      if (this.points.length > 1) {
+        const xs = this.points.map(p => p[0]);
+        const ys = this.points.map(p => p[1]);
+        const xmin = Math.min(...xs), xmax = Math.max(...xs);
+        const ymin = Math.min(...ys), ymax = Math.max(...ys);
+
+        this.DX = (xmax - xmin) / this.NX || 1;
+        this.DY = (ymax - ymin) / this.NY || 1;
+        this.X0 = Math.floor(xmin / this.DX) * this.DX;
+        this.Y0 = Math.floor(ymin / this.DY) * this.DY;
+      } else {
+        this.X0 = -this.NX / 2;
+        this.DX = 1;
+        this.Y0 = -this.NY / 2;
+        this.DY = 1;
+      }
+
+      document.getElementById('fscalex0').value = this.X0;
+      document.getElementById('fscaledx').value = this.DX;
+      document.getElementById('fscaley0').value = this.Y0;
+      document.getElementById('fscaledy').value = this.DY;
+    } else {
+      this.X0 = this.parseNumberInput('fscalex0', -3);
+      this.DX = this.parseNumberInput('fscaledx', 1);
+      this.Y0 = this.parseNumberInput('fscaley0', -2);
+      this.DY = this.parseNumberInput('fscaledy', 1);
+      if (this.DX === 0) this.DX = 1;
+      if (this.DY === 0) this.DY = 1;
+    }
+
+    this.calculateFit();
+  }
+
+  calculateFit() {
+    const n = this.points.length;
+    if (n < 2) return;
+
+    let sx = 0, sy = 0, sxx = 0, sxy = 0, syy = 0;
+    this.points.forEach(([x, y]) => {
+      sx += x; sy += y; sxx += x * x; sxy += x * y; syy += y * y;
+    });
+
+    this.fit.LM = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+    this.fit.LB = (sy - this.fit.LM * sx) / n;
+    
+    const sxy_c = sxy - (sx * sy) / n;
+    const sxx_c = sxx - (sx * sx) / n;
+    const syy_c = syy - (sy * sy) / n;
+    this.fit.r2 = (sxx_c * syy_c !== 0) ? (sxy_c * sxy_c) / (sxx_c * syy_c) : 0;
+  }
+
+  getDP(val) {
+    const str = val.toString();
+    return str.includes('.') ? str.split('.')[1].length : 0;
+  }
+
+  formatLabelNumber(val, dp) {
+    let formatted = val.toFixed(dp);
+    return formatted.replace('-', '−');
+  }
+
+  xtoSX(x) { return this.MX + (x - this.X0) * (this.NX * this.numpixel) / (this.NX * this.DX); }
+  ytoSY(y) { return this.MY + (this.NY * this.numpixel) - (y - this.Y0) * (this.NY * this.numpixel) / (this.NY * this.DY); }
+
+  render() {
+    const dpr = window.devicePixelRatio || 1;
+    const width = this.NX * this.numpixel + this.MX * 2;
+    const height = this.NY * this.numpixel + this.MY * 2;
+
+    this.canvas.width = width * dpr;
+    this.canvas.height = height * dpr;
+    this.canvas.style.width = `${width}px`;
+    this.canvas.style.height = `${height}px`;
+
+    this.ctx.resetTransform();
+    this.ctx.scale(dpr, dpr);
+    this.ctx.clearRect(0, 0, width, height);
+
+    // 1. Draw Grid background and axis lines
+    this.drawGridLines(width, height);
+
+    // 2. Draw Data Best Fit Line
+    if (document.getElementById('fdrawfit').checked && this.points.length >= 2) {
+      this.drawFitLine();
+    }
+
+    // 3. Draw Data Point Markers
+    this.drawPoints();
+
+    // 4. Draw Custom Equation Plots
+    this.drawCustomEquations();
+
+    // 5. Draw Axis Labels LAST so text/glow remains layered on top of all graphs
+    if (document.getElementById('fmarkaxes').checked) {
+      this.drawAxisLabels();
+    }
+  }
+
+  drawGridLines(w, h) {
+    const ctx = this.ctx;
+    const gridW = this.NX * this.numpixel;
+    const gridH = this.NY * this.numpixel;
+
+    if (document.getElementById('fdrawminorgridlines').checked) {
+      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = '#444';
+      const minorStep = this.numpixel / 10;
+
+      ctx.beginPath();
+      for (let y = 0; y <= gridH; y += minorStep) {
+        ctx.moveTo(this.MX, this.MY + y + 0.5);
+        ctx.lineTo(this.MX + gridW + 0.5, this.MY + y + 0.5);
+      }
+      for (let x = 0; x <= gridW; x += minorStep) {
+        ctx.moveTo(this.MX + x + 0.5, this.MY);
+        ctx.lineTo(this.MX + x + 0.5, this.MY + gridH);
+      }
+      ctx.stroke();
+    }
+
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#000';
+    ctx.beginPath();
+
+    for (let i = 0; i <= this.NY; i++) {
+      const y = this.MY + i * this.numpixel + 0.5;
+      if (document.getElementById('fdrawmajorgridlines').checked || (document.getElementById('fdrawaxes').checked && i === this.NY)) {
+        ctx.moveTo(this.MX, y); ctx.lineTo(this.MX + gridW + 0.5, y);
+      }
+      if (document.getElementById('fdrawticks').checked) {
+        ctx.moveTo(this.MX - 5, y); ctx.lineTo(this.MX, y);
+      }
+    }
+
+    for (let i = 0; i <= this.NX; i++) {
+      const x = this.MX + i * this.numpixel + 0.5;
+      if (document.getElementById('fdrawmajorgridlines').checked || (document.getElementById('fdrawaxes').checked && i === 0)) {
+        ctx.moveTo(x, this.MY); ctx.lineTo(x, this.MY + gridH);
+      }
+      if (document.getElementById('fdrawticks').checked) {
+        ctx.moveTo(x, this.MY + gridH); ctx.lineTo(x, this.MY + gridH + 5);
+      }
+    }
+    ctx.stroke();
+  }
+
+  drawAxisLabels() {
+    const ctx = this.ctx;
+    const gridH = this.NY * this.numpixel;
+
+    ctx.font = '14px Arial';
+    
+    const dpSetting = document.getElementById('fdpselect').value;
+    const dpX = dpSetting === 'auto' ? Math.max(this.getDP(this.DX), this.getDP(this.X0)) : parseInt(dpSetting);
+    const dpY = dpSetting === 'auto' ? Math.max(this.getDP(this.DY), this.getDP(this.Y0)) : parseInt(dpSetting);
+
+    const enableGlow = document.getElementById('ftextglow').checked;
+    const alignXZero = document.getElementById('falignxlabelzero').checked;
+
+    // Y-axis labels
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= this.NY; i++) {
+      const rawVal = this.Y0 + (this.NY - i) * this.DY;
+      const valStr = this.formatLabelNumber(rawVal, dpY);
+      const yPos = this.MY + i * this.numpixel + 4;
+      
+      if (enableGlow) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3.5;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(valStr, this.MX - 8, yPos);
+      }
+      ctx.fillStyle = '#000000';
+      ctx.fillText(valStr, this.MX - 8, yPos);
+    }
+
+    // X-axis label positioning (at y=0 if enabled and in range, or bottom)
+    const yZeroPos = this.ytoSY(0);
+    let xLabelY;
+    if (alignXZero && yZeroPos >= this.MY && yZeroPos <= this.MY + gridH) {
+      xLabelY = yZeroPos + 16;
+    } else {
+      xLabelY = this.MY + gridH + 20;
+    }
+
+    ctx.textAlign = 'center';
+    for (let i = 0; i <= this.NX; i++) {
+      const rawVal = this.X0 + i * this.DX;
+      const valStr = this.formatLabelNumber(rawVal, dpX);
+      const xPos = this.MX + i * this.numpixel;
+
+      if (enableGlow) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3.5;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(valStr, xPos, xLabelY);
+      }
+      ctx.fillStyle = '#000000';
+      ctx.fillText(valStr, xPos, xLabelY);
+    }
+  }
+
+  drawPoints() {
+    if (this.points.length === 0) return;
+    const ctx = this.ctx;
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1;
+
+    this.points.forEach(([x, y]) => {
+      const sx = this.xtoSX(x);
+      const sy = this.ytoSY(y);
+      ctx.beginPath();
+      ctx.moveTo(sx - 5, sy - 5); ctx.lineTo(sx + 5, sy + 5);
+      ctx.moveTo(sx - 5, sy + 5); ctx.lineTo(sx + 5, sy - 5);
+      ctx.stroke();
+    });
+  }
+
+  drawFitLine() {
+    const ctx = this.ctx;
+    const x1 = this.X0;
+    const y1 = this.fit.LM * x1 + this.fit.LB;
+    const x2 = this.X0 + this.NX * this.DX;
+    const y2 = this.fit.LM * x2 + this.fit.LB;
+
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(this.xtoSX(x1), this.ytoSY(y1));
+    ctx.lineTo(this.xtoSX(x2), this.ytoSY(y2));
+    ctx.stroke();
+
+    if (document.getElementById('fshowequation').checked) {
+      ctx.fillStyle = '#1e40af';
+      ctx.font = '15px Arial';
+      ctx.textAlign = 'center';
+      const sign = this.fit.LB >= 0 ? '+' : '−';
+      const eq = `y = ${this.fit.LM.toFixed(4)} x ${sign} ${Math.abs(this.fit.LB).toFixed(4)}`;
+      ctx.fillText(eq, this.MX + (this.NX * this.numpixel) / 2, this.MY + this.NY * this.numpixel + 42);
+    }
+  }
+
+  drawCustomEquations() {
+    const eqRows = document.querySelectorAll('.eq-row');
+    const ctx = this.ctx;
+
+    eqRows.forEach(row => {
+      const enabled = row.querySelector('.eq-enable').checked;
+      const eqStr = row.querySelector('.eq-input').value.trim();
+      const color = row.querySelector('.eq-color').value;
+
+      if (!enabled || !eqStr) return;
+
+      try {
+        const compiled = math.compile(eqStr);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        let started = false;
+        const steps = this.NX * 100;
+        for (let i = 0; i <= steps; i++) {
+          const x = this.X0 + (i / steps) * (this.NX * this.DX);
+          const y = compiled.evaluate({ x, pi: Math.PI, e: Math.E });
+          if (typeof y === 'number' && !isNaN(y)) {
+            const sx = this.xtoSX(x);
+            const sy = this.ytoSY(y);
+            if (!started) { ctx.moveTo(sx, sy); started = true; }
+            else { ctx.lineTo(sx, sy); }
+          }
+        }
+        ctx.stroke();
+      } catch (e) {
+        // Ignore math parse errors while typing formulas
+      }
+    });
+  }
+
+  exportPNG() {
+    const link = document.createElement('a');
+    link.download = 'graph.png';
+    link.href = this.canvas.toDataURL('image/png');
+    link.click();
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => new GraphApp());
+</script>
+</body>
 </html>

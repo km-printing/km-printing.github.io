@@ -1,1 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Graph Generator v3.01</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="home.css"/>
+	<script src="js/jquery-2.2.4.min.js"></script>
+	<script src="js/math.min.js"></script>
+	<script src="js/canvas2svg.js"></script>
+	<script src="home.js"></script>
+</head>
+<body>
 
+<div id="tablepanel">
+
+	<div class="boxbox" id="sizebox">
+		<div class="boxhead" style="font-size:14px;">Graph size: <select id="fgraphsize">
+				<option value="1">Small 6x4</option>
+				<option value="2">Small 4x6</option>
+				<option value="3">Big 12x8</option>
+				<option value="22">2x2</option>
+				<option value="23">2x3</option>
+				<option value="24">2x4</option>
+				<option value="25">2x5</option>
+				<option value="26">2x6</option>
+				<option value="28">2x8</option>
+				<option value="32">3x2</option>
+				<option value="33">3x3</option>
+				<option value="34">3x4</option>
+				<option value="35">3x5</option>
+				<option value="36">3x6</option>
+				<option value="42">4x2</option>
+				<option value="43">4x3</option>
+				<option value="44">4x4</option>
+				<option value="45">4x5</option>
+				<option value="46">4x6</option>
+				<option value="52">5x2</option>
+				<option value="53">5x3</option>
+				<option value="54">5x4</option>
+				<option value="55">5x5</option>
+				<option value="56">5x6</option>
+				
+				<option value="86">8x6</option>
+				<option value="68">6x8</option>
+			</select>
+		</div>
+	</div>
+<div class="boxbox" id="fgraphsizecustom">
+		<div style="margin: 0px 0 0 0">
+			<input type="checkbox" id="fgraphsizecustomise"> Customised graph size
+		</div>
+	</div>
+	<div class="boxbox">
+			<div class="sizeboxx1"># of x-squares:</div>
+			<div class="sizeboxx2"><input class="boxhead" type="text" id="fgraphsizex" value=""></div>
+			<div class="sizeboxy1"># of y-squares:</div>
+			<div class="sizeboxy2"><input class="boxhead" type="text" id="fgraphsizey" value=""></div>
+			<div class="spacer"></div>
+	</div>
+
+	<br>
+
+<form id="form1" name="form1" action="http://www.1rox.com/mjc/graph/">
+<input type="hidden" name="act" value="submit">
+<input type="hidden" name="activity" value="1">
+<table id="tabledata" border="1" bordercolor="#555" style="border-collapse:collapse">
+    <tbody><tr align="center" bgcolor="#d3e1f9">
+        <th>x</th>
+        <th>y</th>
+    </tr>
+    <tr align="center">
+        <td><input class="datavalue" type="text" id="tb11" name="tb11" value="" maxlength="8"></td>
+        <td><input class="datavalue" type="text" id="tb12" name="tb12" value="" maxlength="8"></td>
+    </tr>
+    <tr align="center">
+        <td><input class="datavalue" type="text" id="tb21" name="tb21" value="" maxlength="8"></td>
+        <td><input class="datavalue" type="text" id="tb22" name="tb22" value="" maxlength="8"></td>
+    </tr>
+    <tr align="center">
+        <td><input class="datavalue" type="text" id="tb31" name="tb31" value="" maxlength="8"></td>
+        <td><input class="datavalue" type="text" id="tb32" name="tb32" value="" maxlength="8"></td>
+    </tr>
+    <tr align="center">
+        <td><input class="datavalue" type="text" id="tb41" name="tb41" value="" maxlength="8"></td>
+        <td><input class="datavalue" type="text" id="tb42" name="tb42" value="" maxlength="8"></td>
+    </tr>
+    <tr align="center">
+        <td><input class="datavalue" type="text" id="tb51" name="tb51" value="" maxlength="8"></td>
+        <td><input class="datavalue" type="text" id="tb52" name="tb52" value="" maxlength="8"></td>
+    </tr>
+    <tr align="center">
+        <td><input class="datavalue" type="text" id="tb61" name="tb61" value="" maxlength="8"></td>
+        <td><input class="datavalue" type="text" id="tb62" name="tb62" value="" maxlength="8"></td>
+    </tr><tr align="center">
+        <td><input class="datavalue" type="text" id="tb71" name="tb71" value="" maxlength="8"></td>
+        <td><input class="datavalue" type="text" id="tb72" name="tb72" value="" maxlength="8"></td>
+    </tr><tr align="center">
+        <td><input class="datavalue" type="text" id="tb81" name="tb81" value="" maxlength="8"></td>
+        <td><input class="datavalue" type="text" id="tb82" name="tb82" value="" maxlength="8"></td>
+    </tr>
+</tbody></table>
+</form>
+
+	<div class="boxbox" id="plotbox">
+		<div style="margin: 0px 0 0 0">
+			<input type="checkbox" id="fplotpoints" checked=""> Plot points
+		</div>
+	</div>
+
+	<div class="boxbox" id="scalebox">
+		<div class="boxhead">Axes:</div>
+		<div>
+			<input type="checkbox" id="fautoscale" checked=""> Auto scale
+		</div>
+		<div class="scalerow">
+			<div class="scalec1">x0:</div>
+			<div class="scalec2"><input class="scalevalue" type="text" id="fscalex0" value="-2" readonly=""></div>
+			<div class="scalec1">dx:</div>
+			<div class="scalec2"><input class="scalevalue" type="text" id="fscaledx" value="1" readonly=""></div>
+			<div class="spacer"></div>
+		</div>
+		<div class="scalerow">
+			<div class="scalec1">y0:</div>
+			<div class="scalec2"><input class="scalevalue" type="text" id="fscaley0" value="-3" readonly=""></div>
+			<div class="scalec1">dy:</div>
+			<div class="scalec2"><input class="scalevalue" type="text" id="fscaledy" value="1" readonly=""></div>
+			<div class="spacer"></div>
+		</div>
+		<div style="margin: 3px 0 0 0">
+			<input type="checkbox" id="fdrawminorgridlines" checked=""> Draw minor gridlines
+		</div>
+		<div style="margin: 3px 0 0 0">
+			<input type="checkbox" id="fdrawmajorgridlines" checked=""> Draw major gridlines
+		</div>
+		<div style="margin: 3px 0 0 0">
+			<input type="checkbox" id="fdrawaxes" checked=""> Draw axes
+		</div>
+		<div style="margin: 3px 0 0 0">
+			<input type="checkbox" id="fdrawaxesarrow"> Draw axes arrow
+		</div>
+		<div style="margin: 3px 0 0 0">
+			<input type="checkbox" id="fdrawticks" checked=""> Draw ticks
+		</div>
+		<div style="margin: 3px 0 0 0">
+			<input type="checkbox" id="fmarkaxes" checked=""> Mark axes
+		</div>
+	</div>
+
+	<div class="boxbox" id="zoombox">
+		<div class="boxhead">Zoom: <span id="zoomspan">100%</span></div>
+		<div class="slidecontainer">
+		<input type="range" min="-5" max="5" value="0" step="1" class="slider" id="fzoomslider">
+		</div>
+	</div>
+
+	<div class="boxbox" id="fitbox">
+		<div class="boxhead">Fit:</div>
+		<div>
+			<select id="ffittype">
+				<option value="1">Linear: y = mx + c</option>
+				<option value="2">Curve: y = kx^n</option>
+				<option value="3">Curve: y = ke^(nx)</option>
+				<option value="4">Curve: y = k ln x + b</option>
+				<option value="21">Curve: y = ax&sup2; + bx + c</option>
+				<option value="31">Curve: y = ax&sup3;+bx&sup2;+cx+d</option>
+			</select>
+		</div>
+		<div style="margin: 3px 0 0 0">
+			<input type="checkbox" id="fshowequation" checked=""> Show equation
+		</div>
+		<div style="margin: 0px 0 0 0">
+			<input type="checkbox" id="fdrawfit" checked=""> Draw best fit line
+		</div>
+		<div style="margin: 0px 0 0 0">
+			<input type="checkbox" id="fdrawtriangle" checked=""> Draw triangle
+		</div>
+		<div id="fitanswer"></div>
+	</div>
+
+	<div class="boxbox" id="drawEq">
+		<div>
+			<input type="checkbox" id="fdrawequation"> Draw equation? E.g. y=Math.sin(x)
+		</div>
+		<div style="margin: 3px 0 0 0">
+			<input class="boxhead" type="text" id="drawEq1" name="drawEq1" value="">
+		</div>
+	</div>
+
+	<div class="boxbox" id="downloadbox">
+		<a id="download" href="#">Download graph as picture</a>
+	</div>
+	
+	<div class="boxbox" id="downloadsvgbox">
+		<a id="downloadsvg" href="#">Download graph as SVG</a>
+	</div>
+
+	<!--<br/><div class="boxbox">
+		<a href="vers/">Old versions</a>
+	</div>-->
+
+</div>
+
+<div id="graphpanel">
+
+	<div id="graphcontainer">
+
+		<canvas id="canvas" xwidth="500" xheight="700" width="500" height="700"></canvas>
+
+	</div>
+
+</div>
+
+<div id="output"></div></body>
+</html>

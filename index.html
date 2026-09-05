@@ -900,11 +900,44 @@ class GraphApp {
   }
 
   exportPNG() {
-    const link = document.createElement('a');
-    link.download = 'graph.png';
-    link.href = this.canvas.toDataURL('image/png');
-    link.click();
+  // 300 DPI requires 118.11 px/cm. Current base is 30 px/cm (60px per 2cm).
+  const printDpiScale = 118.11 / 30; // ~3.937x multiplier
+
+  const baseWidth = this.NX * this.numpixel + this.MX * 2;
+  const baseHeight = this.NY * this.numpixel + this.MY * 2;
+
+  // 1. Temporarily upscale canvas pixel dimensions to 300 DPI
+  this.canvas.width = baseWidth * printDpiScale;
+  this.canvas.height = baseHeight * printDpiScale;
+
+  // 2. Scale drawing context so all vector paths/text render at full 300 DPI sharpness
+  this.ctx.resetTransform();
+  this.ctx.scale(printDpiScale, printDpiScale);
+  this.ctx.clearRect(0, 0, baseWidth, baseHeight);
+
+  // 3. Render high-res graphics
+  this.drawGridLines(baseWidth, baseHeight);
+  if (document.getElementById('fdrawfit').checked && this.points.length >= 2) {
+    this.drawFitLine();
   }
+  this.drawPoints();
+  this.drawCustomEquations();
+  if (document.getElementById('fmarkaxes').checked) {
+    this.drawAxisLabels();
+  }
+  if (document.getElementById('fshowaxeslabels').checked) {
+    this.drawAxisNameLabels();
+  }
+
+  // 4. Download high-res image
+  const link = document.createElement('a');
+  link.download = 'graph_300dpi.png';
+  link.href = this.canvas.toDataURL('image/png');
+  link.click();
+
+  // 5. Restore screen canvas display
+  this.render();
+}
 }
 
 window.addEventListener('DOMContentLoaded', () => new GraphApp());

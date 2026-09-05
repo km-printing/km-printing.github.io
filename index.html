@@ -40,12 +40,12 @@
     
     .stage { display: flex; align-items: center; justify-content: center; padding: 20px; overflow: auto; background: #e2e8f0; }
     .canvas-container { background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 4px; padding: 12px; }
-    canvas { display: block; }
+    canvas { display: block; transform-origin: center center; }
 
     /* Modal Styling */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 1000; }
     .modal-overlay.active { display: flex; }
-    .modal-card { background: #ffffff; width: 90%; max-width: 480px; border-radius: 8px; padding: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); position: relative; max-height: 85vh; overflow-y: auto; }
+    .modal-card { background: #ffffff; width: 90%; max-width: 500px; border-radius: 8px; padding: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); position: relative; max-height: 85vh; overflow-y: auto; }
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
     .modal-title { font-weight: 700; font-size: 0.95rem; color: #0f172a; }
     .modal-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; line-height: 1; }
@@ -203,19 +203,23 @@
     <div class="modal-body">
       <strong>1. Insert Image into Word</strong>
       <ul>
-        <li>Go to <b>Insert</b> &gt; <b>Pictures</b> &gt; <b>This Device</b> (or copy and paste directly).</li>
+        <li>Go to <b>Insert</b> &gt; <b>Pictures</b> &gt; <b>This Device</b> (or copy/paste directly).</li>
       </ul>
 
-      <strong>2. Set Physical Dimensions (1 Square = 2 cm)</strong>
+      <strong>2. Set Dimensions (Grid + 2 cm Border)</strong>
+      <p style="margin: 4px 0 6px 0; color: #475569;">Each grid square is <b>2 cm × 2 cm</b>, plus a <b>1 cm margin on all 4 sides (2 cm total added to width and height)</b> for arrowheads and labels.</p>
       <ul>
-        <li>Right-click the image and select <b>Format Picture</b>.</li>
-        <li>Go to the <b>Size & Properties</b> tab (ruler/box icon).</li>
+        <li>Right-click image &gt; <b>Format Picture</b> &gt; <b>Size & Properties</b> tab.</li>
         <li>Ensure <b>Lock aspect ratio</b> is checked.</li>
-        <li>Set dimensions based on your selected grid layout:
+        <li>Set total dimensions according to your layout:
           <ul>
-            <li><b>Standard Grid (6 × 4):</b> Width = 12 cm, Height = 8 cm</li>
-            <li><b>Small Grid (4 × 6):</b> Width = 8 cm, Height = 12 cm</li>
-            <li><b>Large Grid (12 × 8):</b> Width = 24 cm, Height = 16 cm</li>
+            <li><b>Standard Grid (6 × 4):</b> Width = <b>14 cm</b>, Height = <b>10 cm</b></li>
+            <li><b>Small Grid (4 × 6):</b> Width = <b>10 cm</b>, Height = <b>14 cm</b></li>
+            <li><b>Large Grid (12 × 8):</b> Width = <b>26 cm</b>, Height = <b>18 cm</b></li>
+            <li><b>Custom Layouts:</b><br>
+              <code>Width = (X Squares × 2 cm) + 2 cm</code><br>
+              <code>Height = (Y Squares × 2 cm) + 2 cm</code>
+            </li>
           </ul>
         </li>
       </ul>
@@ -237,9 +241,12 @@ class GraphApp {
     this.NY = 4;
     this.numpixel = 60; // 60px = 2cm in MS Word
     
+    // 30px margin = 1cm on each side (2cm total added space)
     this.MX = 30;
     this.MY = 30;
     
+    this.zoomLevel = 1.0; // Visual canvas display zoom scale
+
     this.X0 = -3; this.DX = 1;
     this.Y0 = -2; this.DY = 1;
     this.points = [];
@@ -299,48 +306,27 @@ class GraphApp {
 
   getMousePos(e) {
     const rect = this.canvas.getBoundingClientRect();
+    const baseWidth = this.NX * this.numpixel + this.MX * 2;
+    const baseHeight = this.NY * this.numpixel + this.MY * 2;
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+      x: (e.clientX - rect.left) * (baseWidth / rect.width),
+      y: (e.clientY - rect.top) * (baseHeight / rect.height)
     };
   }
 
   handleWheel(e) {
     e.preventDefault();
+    // Visual Canvas View Zooming (Does not affect graph mathematical settings)
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+    this.zoomLevel = Math.min(Math.max(0.4, this.zoomLevel * zoomFactor), 3.0);
+    this.updateCanvasDisplaySize();
+  }
 
-    const autoScaleCb = document.getElementById('fautoscale');
-    if (autoScaleCb.checked) {
-      autoScaleCb.checked = false;
-      document.getElementById('fscalex0').readOnly = false;
-      document.getElementById('fscaledx').readOnly = false;
-      document.getElementById('fscaley0').readOnly = false;
-      document.getElementById('fscaledy').readOnly = false;
-    }
-
-    const m = this.getMousePos(e);
-    const gridW = this.NX * this.numpixel;
-    const gridH = this.NY * this.numpixel;
-
-    const fracX = (m.x - this.MX) / gridW;
-    const fracY = (this.MY + gridH - m.y) / gridH;
-
-    const xMouse = this.X0 + fracX * (this.NX * this.DX);
-    const yMouse = this.Y0 + fracY * (this.NY * this.DY);
-
-    const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
-
-    this.DX *= zoomFactor;
-    this.DY *= zoomFactor;
-
-    this.X0 = xMouse - fracX * (this.NX * this.DX);
-    this.Y0 = yMouse - fracY * (this.NY * this.DY);
-
-    document.getElementById('fscalex0').value = this.X0;
-    document.getElementById('fscaledx').value = this.DX;
-    document.getElementById('fscaley0').value = this.Y0;
-    document.getElementById('fscaledy').value = this.DY;
-
-    this.render();
+  updateCanvasDisplaySize() {
+    const baseWidth = this.NX * this.numpixel + this.MX * 2;
+    const baseHeight = this.NY * this.numpixel + this.MY * 2;
+    this.canvas.style.width = `${baseWidth * this.zoomLevel}px`;
+    this.canvas.style.height = `${baseHeight * this.zoomLevel}px`;
   }
 
   handleMouseDown(e) {
@@ -585,8 +571,7 @@ class GraphApp {
 
     this.canvas.width = width * dpr;
     this.canvas.height = height * dpr;
-    this.canvas.style.width = `${width}px`;
-    this.canvas.style.height = `${height}px`;
+    this.updateCanvasDisplaySize();
 
     this.ctx.resetTransform();
     this.ctx.scale(dpr, dpr);

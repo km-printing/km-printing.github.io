@@ -763,8 +763,8 @@ class GraphApp {
     const defaultYArrowX = (xZeroPos >= this.MX && xZeroPos <= this.MX + gridW) ? xZeroPos : this.MX;
     const defaultYArrowY = this.MY - extension;
 
-    if (!this.xNamePos) this.xNamePos = { x: defaultXArrowX + 12, y: defaultXArrowY + 4 };
-    if (!this.yNamePos) this.yNamePos = { x: defaultYArrowX, y: defaultYArrowY - 10 };
+    if (!this.xNamePos) this.xNamePos = { x: defaultXArrowX + 4, y: defaultXArrowY - 10 };
+    if (!this.yNamePos) this.yNamePos = { x: defaultYArrowX - 5, y: defaultYArrowY + 10 };
 
     const enableGlow = document.getElementById('ftextglow').checked;
 

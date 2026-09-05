@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Graph Generator v4.7</title>
+  <title>Graph Generator v4.9</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
   <style>
@@ -187,19 +187,20 @@ class GraphApp {
     this.ctx = this.canvas.getContext('2d');
     this.NX = 6;
     this.NY = 4;
-    this.numpixel = 60; 
-    this.MX = 50;
-    this.MY = 50;
+    this.numpixel = 60; // 60px = 2cm in MS Word
+    
+    // 30px margin = 1cm on each side (2cm total added space)
+    this.MX = 30;
+    this.MY = 30;
     
     this.X0 = -3; this.DX = 1;
     this.Y0 = -2; this.DY = 1;
     this.points = [];
     this.fit = { LM: 0, LB: 0, r2: 0 };
 
-    // Custom Draggable Label Positions
     this.xNamePos = null;
     this.yNamePos = null;
-    this.draggingTarget = null; // 'x' | 'y' | null
+    this.draggingTarget = null;
     this.dragOffset = { x: 0, y: 0 };
 
     this.initEvents();
@@ -235,7 +236,6 @@ class GraphApp {
 
     document.getElementById('downloadpng').addEventListener('click', () => this.exportPNG());
 
-    // Canvas Dragging Events for Axis Names
     this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
     window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
     window.addEventListener('mouseup', () => this.handleMouseUp());
@@ -253,7 +253,7 @@ class GraphApp {
     if (!document.getElementById('fshowaxeslabels').checked) return;
     const m = this.getMousePos(e);
 
-    const hitRadius = 25;
+    const hitRadius = 20;
     if (this.xNamePos && Math.hypot(m.x - this.xNamePos.x, m.y - this.xNamePos.y) < hitRadius) {
       this.draggingTarget = 'x';
       this.dragOffset = { x: m.x - this.xNamePos.x, y: m.y - this.xNamePos.y };
@@ -283,11 +283,7 @@ class GraphApp {
       const overX = this.xNamePos && Math.hypot(m.x - this.xNamePos.x, m.y - this.xNamePos.y) < hitRadius;
       const overY = this.yNamePos && Math.hypot(m.x - this.yNamePos.x, m.y - this.yNamePos.y) < hitRadius;
 
-      if (overX || overY) {
-        this.canvas.style.cursor = 'grab';
-      } else {
-        this.canvas.style.cursor = 'default';
-      }
+      this.canvas.style.cursor = (overX || overY) ? 'grab' : 'default';
     } else {
       this.canvas.style.cursor = 'default';
     }
@@ -475,7 +471,7 @@ class GraphApp {
       
       if (enableGlow) {
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 2.5;
         ctx.lineJoin = 'round';
         ctx.strokeText(seg.text, currentX, y);
       }
@@ -502,26 +498,19 @@ class GraphApp {
     this.ctx.scale(dpr, dpr);
     this.ctx.clearRect(0, 0, width, height);
 
-    // 1. Draw Grid background and axis lines with arrowheads
     this.drawGridLines(width, height);
 
-    // 2. Draw Data Best Fit Line
     if (document.getElementById('fdrawfit').checked && this.points.length >= 2) {
       this.drawFitLine();
     }
 
-    // 3. Draw Data Point Markers
     this.drawPoints();
-
-    // 4. Draw Custom Equation Plots
     this.drawCustomEquations();
 
-    // 5. Draw Axis Tick Number Labels
     if (document.getElementById('fmarkaxes').checked) {
       this.drawAxisLabels();
     }
 
-    // 6. Draw Draggable Axis Name Labels (Top Layer)
     if (document.getElementById('fshowaxeslabels').checked) {
       this.drawAxisNameLabels();
     }
@@ -529,7 +518,7 @@ class GraphApp {
 
   drawArrowhead(x, y, angle) {
     const ctx = this.ctx;
-    const size = 9;
+    const size = 7;
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angle);
@@ -575,7 +564,7 @@ class GraphApp {
         ctx.moveTo(this.MX, y); ctx.lineTo(this.MX + gridW + 0.5, y);
       }
       if (document.getElementById('fdrawticks').checked) {
-        ctx.moveTo(this.MX - 5, y); ctx.lineTo(this.MX, y);
+        ctx.moveTo(this.MX - 4, y); ctx.lineTo(this.MX, y);
       }
     }
 
@@ -585,22 +574,32 @@ class GraphApp {
         ctx.moveTo(x, this.MY); ctx.lineTo(x, this.MY + gridH);
       }
       if (document.getElementById('fdrawticks').checked) {
-        ctx.moveTo(x, this.MY + gridH); ctx.lineTo(x, this.MY + gridH + 5);
+        ctx.moveTo(x, this.MY + gridH); ctx.lineTo(x, this.MY + gridH + 4);
       }
     }
     ctx.stroke();
 
-    // Draw Arrowheads if enabled
+    // Extend axes by 3 minor gridlines (18px = 0.6cm) to fit inside 1cm margin
     if (document.getElementById('fdrawarrows').checked) {
+      const extension = 3 * (this.numpixel / 10);
       const yZeroPos = this.ytoSY(0);
       const xZeroPos = this.xtoSX(0);
 
-      let xArrowY = (yZeroPos >= this.MY && yZeroPos <= this.MY + gridH) ? yZeroPos : this.MY + gridH;
-      let xArrowX = this.MX + gridW;
-      this.drawArrowhead(xArrowX, xArrowY, 0);
+      const xArrowY = (yZeroPos >= this.MY && yZeroPos <= this.MY + gridH) ? yZeroPos : this.MY + gridH;
+      const xArrowX = this.MX + gridW + extension;
 
-      let yArrowX = (xZeroPos >= this.MX && xZeroPos <= this.MX + gridW) ? xZeroPos : this.MX;
-      let yArrowY = this.MY;
+      const yArrowX = (xZeroPos >= this.MX && xZeroPos <= this.MX + gridW) ? xZeroPos : this.MX;
+      const yArrowY = this.MY - extension;
+
+      ctx.beginPath();
+      ctx.moveTo(this.MX + gridW, xArrowY);
+      ctx.lineTo(xArrowX, xArrowY);
+
+      ctx.moveTo(yArrowX, this.MY);
+      ctx.lineTo(yArrowX, yArrowY);
+      ctx.stroke();
+
+      this.drawArrowhead(xArrowX, xArrowY, 0);
       this.drawArrowhead(yArrowX, yArrowY, -Math.PI / 2);
     }
   }
@@ -610,7 +609,8 @@ class GraphApp {
     const gridW = this.NX * this.numpixel;
     const gridH = this.NY * this.numpixel;
 
-    ctx.font = '14px Arial';
+    // 11.6px renders exactly as 11pt font in MS Word
+    ctx.font = '11.6px Arial';
     
     const dpSetting = document.getElementById('fdpselect').value;
     const dpX = dpSetting === 'auto' ? Math.max(this.getDP(this.DX), this.getDP(this.X0)) : parseInt(dpSetting);
@@ -623,12 +623,11 @@ class GraphApp {
     const xZeroPos = this.xtoSX(0);
     const yZeroPos = this.ytoSY(0);
 
-    // Y-axis labels alignment
     let yLabelX;
     if (alignYZero && xZeroPos >= this.MX && xZeroPos <= this.MX + gridW) {
-      yLabelX = xZeroPos - 8;
+      yLabelX = xZeroPos - 6;
     } else {
-      yLabelX = this.MX - 8;
+      yLabelX = this.MX - 6;
     }
 
     ctx.textAlign = 'right';
@@ -639,7 +638,7 @@ class GraphApp {
       
       if (enableGlow) {
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = 2.5;
         ctx.lineJoin = 'round';
         ctx.strokeText(valStr, yLabelX, yPos);
       }
@@ -647,12 +646,11 @@ class GraphApp {
       ctx.fillText(valStr, yLabelX, yPos);
     }
 
-    // X-axis label positioning
     let xLabelY;
     if (alignXZero && yZeroPos >= this.MY && yZeroPos <= this.MY + gridH) {
-      xLabelY = yZeroPos + 16;
+      xLabelY = yZeroPos + 14;
     } else {
-      xLabelY = this.MY + gridH + 20;
+      xLabelY = this.MY + gridH + 15;
     }
 
     ctx.textAlign = 'center';
@@ -663,7 +661,7 @@ class GraphApp {
 
       if (enableGlow) {
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = 2.5;
         ctx.lineJoin = 'round';
         ctx.strokeText(valStr, xPos, xLabelY);
       }
@@ -682,23 +680,22 @@ class GraphApp {
     const yZeroPos = this.ytoSY(0);
     const xZeroPos = this.xtoSX(0);
 
+    const extension = 3 * (this.numpixel / 10);
     const defaultXArrowY = (yZeroPos >= this.MY && yZeroPos <= this.MY + gridH) ? yZeroPos : this.MY + gridH;
-    const defaultXArrowX = this.MX + gridW;
+    const defaultXArrowX = this.MX + gridW + extension;
     const defaultYArrowX = (xZeroPos >= this.MX && xZeroPos <= this.MX + gridW) ? xZeroPos : this.MX;
-    const defaultYArrowY = this.MY;
+    const defaultYArrowY = this.MY - extension;
 
-    if (!this.xNamePos) this.xNamePos = { x: defaultXArrowX + 18, y: defaultXArrowY + 4 };
-    if (!this.yNamePos) this.yNamePos = { x: defaultYArrowX, y: defaultYArrowY - 14 };
+    if (!this.xNamePos) this.xNamePos = { x: defaultXArrowX + 12, y: defaultXArrowY + 4 };
+    if (!this.yNamePos) this.yNamePos = { x: defaultYArrowX, y: defaultYArrowY - 10 };
 
     const enableGlow = document.getElementById('ftextglow').checked;
 
     this.ctx.textAlign = 'center';
 
-    // Draw X Axis Name Label with support for partial italics
-    this.drawFormattedText(xLabelText, this.xNamePos.x, this.xNamePos.y, 16, enableGlow);
-
-    // Draw Y Axis Name Label with support for partial italics
-    this.drawFormattedText(yLabelText, this.yNamePos.x, this.yNamePos.y, 16, enableGlow);
+    // 11.6px renders exactly as 11pt font in MS Word
+    this.drawFormattedText(xLabelText, this.xNamePos.x, this.xNamePos.y, 11.6, enableGlow);
+    this.drawFormattedText(yLabelText, this.yNamePos.x, this.yNamePos.y, 11.6, enableGlow);
   }
 
   drawPoints() {
@@ -711,8 +708,8 @@ class GraphApp {
       const sx = this.xtoSX(x);
       const sy = this.ytoSY(y);
       ctx.beginPath();
-      ctx.moveTo(sx - 5, sy - 5); ctx.lineTo(sx + 5, sy + 5);
-      ctx.moveTo(sx - 5, sy + 5); ctx.lineTo(sx + 5, sy - 5);
+      ctx.moveTo(sx - 4, sy - 4); ctx.lineTo(sx + 4, sy + 4);
+      ctx.moveTo(sx - 4, sy + 4); ctx.lineTo(sx + 4, sy - 4);
       ctx.stroke();
     });
   }
@@ -733,11 +730,11 @@ class GraphApp {
 
     if (document.getElementById('fshowequation').checked) {
       ctx.fillStyle = '#1e40af';
-      ctx.font = '15px Arial';
+      ctx.font = '11.6px Arial';
       ctx.textAlign = 'center';
       const sign = this.fit.LB >= 0 ? '+' : '−';
       const eq = `y = ${this.fit.LM.toFixed(4)} x ${sign} ${Math.abs(this.fit.LB).toFixed(4)}`;
-      ctx.fillText(eq, this.MX + (this.NX * this.numpixel) / 2, this.MY + this.NY * this.numpixel + 42);
+      ctx.fillText(eq, this.MX + (this.NX * this.numpixel) / 2, this.MY + this.NY * this.numpixel + 26);
     }
   }
 

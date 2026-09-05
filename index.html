@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Graph Generator v4.6</title>
+  <title>Graph Generator v4.7</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
   <style>
@@ -133,12 +133,12 @@
 
       <div class="grid-2" style="margin-top: 6px;">
         <div>
-          <div class="field-label">X Axis Name</div>
-          <input type="text" id="fxaxislabel" value="x">
+          <div class="field-label">X Axis Name (Use *x* for italics)</div>
+          <input type="text" id="fxaxislabel" value="*x* (cm)">
         </div>
         <div>
-          <div class="field-label">Y Axis Name</div>
-          <input type="text" id="fyaxislabel" value="y">
+          <div class="field-label">Y Axis Name (Use *y* for italics)</div>
+          <input type="text" id="fyaxislabel" value="*y* (cm)">
         </div>
       </div>
     </div>
@@ -278,7 +278,6 @@ class GraphApp {
       return;
     }
 
-    // Hover effect
     if (document.getElementById('fshowaxeslabels').checked) {
       const hitRadius = 20;
       const overX = this.xNamePos && Math.hypot(m.x - this.xNamePos.x, m.y - this.xNamePos.y) < hitRadius;
@@ -437,6 +436,58 @@ class GraphApp {
   xtoSX(x) { return this.MX + (x - this.X0) * (this.NX * this.numpixel) / (this.NX * this.DX); }
   ytoSY(y) { return this.MY + (this.NY * this.numpixel) - (y - this.Y0) * (this.NY * this.numpixel) / (this.NY * this.DY); }
 
+  parseFormattedSegments(text) {
+    const segments = [];
+    const parts = text.split('*');
+    parts.forEach((part, index) => {
+      if (part.length > 0) {
+        segments.push({
+          text: part,
+          italic: index % 2 === 1
+        });
+      }
+    });
+    return segments;
+  }
+
+  drawFormattedText(text, x, y, fontSize, enableGlow) {
+    const ctx = this.ctx;
+    const segments = this.parseFormattedSegments(text);
+
+    let totalWidth = 0;
+    segments.forEach(seg => {
+      ctx.font = `${seg.italic ? 'italic ' : ''}${fontSize}px Arial`;
+      totalWidth += ctx.measureText(seg.text).width;
+    });
+
+    let currentX = x;
+    if (ctx.textAlign === 'center') {
+      currentX = x - totalWidth / 2;
+    } else if (ctx.textAlign === 'right') {
+      currentX = x - totalWidth;
+    }
+
+    const prevAlign = ctx.textAlign;
+    ctx.textAlign = 'left';
+
+    segments.forEach(seg => {
+      ctx.font = `${seg.italic ? 'italic ' : ''}${fontSize}px Arial`;
+      
+      if (enableGlow) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(seg.text, currentX, y);
+      }
+      ctx.fillStyle = '#000000';
+      ctx.fillText(seg.text, currentX, y);
+      
+      currentX += ctx.measureText(seg.text).width;
+    });
+
+    ctx.textAlign = prevAlign;
+  }
+
   render() {
     const dpr = window.devicePixelRatio || 1;
     const width = this.NX * this.numpixel + this.MX * 2;
@@ -544,15 +595,13 @@ class GraphApp {
       const yZeroPos = this.ytoSY(0);
       const xZeroPos = this.xtoSX(0);
 
-      // X-Axis Arrowhead
       let xArrowY = (yZeroPos >= this.MY && yZeroPos <= this.MY + gridH) ? yZeroPos : this.MY + gridH;
       let xArrowX = this.MX + gridW;
-      this.drawArrowhead(xArrowX, xArrowY, 0); // Point Right
+      this.drawArrowhead(xArrowX, xArrowY, 0);
 
-      // Y-Axis Arrowhead
       let yArrowX = (xZeroPos >= this.MX && xZeroPos <= this.MX + gridW) ? xZeroPos : this.MX;
       let yArrowY = this.MY;
-      this.drawArrowhead(yArrowX, yArrowY, -Math.PI / 2); // Point Up
+      this.drawArrowhead(yArrowX, yArrowY, -Math.PI / 2);
     }
   }
 
@@ -624,7 +673,6 @@ class GraphApp {
   }
 
   drawAxisNameLabels() {
-    const ctx = this.ctx;
     const gridW = this.NX * this.numpixel;
     const gridH = this.NY * this.numpixel;
 
@@ -634,7 +682,6 @@ class GraphApp {
     const yZeroPos = this.ytoSY(0);
     const xZeroPos = this.xtoSX(0);
 
-    // Set initial positions relative to arrowheads if not dragged manually
     const defaultXArrowY = (yZeroPos >= this.MY && yZeroPos <= this.MY + gridH) ? yZeroPos : this.MY + gridH;
     const defaultXArrowX = this.MX + gridW;
     const defaultYArrowX = (xZeroPos >= this.MX && xZeroPos <= this.MX + gridW) ? xZeroPos : this.MX;
@@ -645,28 +692,13 @@ class GraphApp {
 
     const enableGlow = document.getElementById('ftextglow').checked;
 
-    ctx.font = '14px Arial';
-    ctx.textAlign = 'center';
+    this.ctx.textAlign = 'center';
 
-    // Draw X Axis Name Label
-    if (enableGlow) {
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 4;
-      ctx.lineJoin = 'round';
-      ctx.strokeText(xLabelText, this.xNamePos.x, this.xNamePos.y);
-    }
-    ctx.fillStyle = '#000000';
-    ctx.fillText(xLabelText, this.xNamePos.x, this.xNamePos.y);
+    // Draw X Axis Name Label with support for partial italics
+    this.drawFormattedText(xLabelText, this.xNamePos.x, this.xNamePos.y, 16, enableGlow);
 
-    // Draw Y Axis Name Label
-    if (enableGlow) {
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 4;
-      ctx.lineJoin = 'round';
-      ctx.strokeText(yLabelText, this.yNamePos.x, this.yNamePos.y);
-    }
-    ctx.fillStyle = '#000000';
-    ctx.fillText(yLabelText, this.yNamePos.x, this.yNamePos.y);
+    // Draw Y Axis Name Label with support for partial italics
+    this.drawFormattedText(yLabelText, this.yNamePos.x, this.yNamePos.y, 16, enableGlow);
   }
 
   drawPoints() {

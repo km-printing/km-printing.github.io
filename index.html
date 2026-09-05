@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Graph Generator v4.9</title>
+  <title>Graph Generator v5.0</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
   <style>
@@ -41,6 +41,18 @@
     .stage { display: flex; align-items: center; justify-content: center; padding: 20px; overflow: auto; background: #e2e8f0; }
     .canvas-container { background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 4px; padding: 12px; }
     canvas { display: block; }
+
+    /* Modal Styling */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-overlay.active { display: flex; }
+    .modal-card { background: #ffffff; width: 90%; max-width: 480px; border-radius: 8px; padding: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); position: relative; max-height: 85vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+    .modal-title { font-weight: 700; font-size: 0.95rem; color: #0f172a; }
+    .modal-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #64748b; line-height: 1; }
+    .modal-close:hover { color: #0f172a; }
+    .modal-body { font-size: 0.85rem; color: #334155; line-height: 1.5; }
+    .modal-body ul { padding-left: 20px; margin: 6px 0 12px 0; }
+    .modal-body li { margin-bottom: 4px; }
   </style>
 </head>
 <body>
@@ -171,11 +183,47 @@
     </div>
 
     <button class="btn" id="downloadpng">Download High-Res PNG</button>
+    <button class="btn btn-secondary" id="open-instructions" style="margin-top: -6px;">MS Word Scaling Instructions</button>
   </div>
 
   <div class="stage">
     <div class="canvas-container">
       <canvas id="canvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Instruction Modal Popup -->
+<div class="modal-overlay" id="instruction-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">MS Word Image Scaling Instructions</div>
+      <button class="modal-close" id="close-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <strong>1. Insert Image into Word</strong>
+      <ul>
+        <li>Go to <b>Insert</b> &gt; <b>Pictures</b> &gt; <b>This Device</b> (or copy and paste directly).</li>
+      </ul>
+
+      <strong>2. Set Physical Dimensions (1 Square = 2 cm)</strong>
+      <ul>
+        <li>Right-click the image and select <b>Format Picture</b>.</li>
+        <li>Go to the <b>Size & Properties</b> tab (ruler/box icon).</li>
+        <li>Ensure <b>Lock aspect ratio</b> is checked.</li>
+        <li>Set dimensions based on your selected grid layout:
+          <ul>
+            <li><b>Standard Grid (6 × 4):</b> Width = 12 cm, Height = 8 cm</li>
+            <li><b>Small Grid (4 × 6):</b> Width = 8 cm, Height = 12 cm</li>
+            <li><b>Large Grid (12 × 8):</b> Width = 24 cm, Height = 16 cm</li>
+          </ul>
+        </li>
+      </ul>
+
+      <strong>3. Text Wrapping</strong>
+      <ul>
+        <li>Click <b>Layout Options</b> next to the image and choose <b>In Line with Text</b> or <b>Square</b>.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -189,7 +237,6 @@ class GraphApp {
     this.NY = 4;
     this.numpixel = 60; // 60px = 2cm in MS Word
     
-    // 30px margin = 1cm on each side (2cm total added space)
     this.MX = 30;
     this.MY = 30;
     
@@ -239,6 +286,15 @@ class GraphApp {
     this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
     window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
     window.addEventListener('mouseup', () => this.handleMouseUp());
+    this.canvas.addEventListener('wheel', (e) => this.handleWheel(e), { passive: false });
+
+    // Modal Events
+    const modal = document.getElementById('instruction-modal');
+    document.getElementById('open-instructions').addEventListener('click', () => modal.classList.add('active'));
+    document.getElementById('close-modal').addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.remove('active');
+    });
   }
 
   getMousePos(e) {
@@ -247,6 +303,44 @@ class GraphApp {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top
     };
+  }
+
+  handleWheel(e) {
+    e.preventDefault();
+
+    const autoScaleCb = document.getElementById('fautoscale');
+    if (autoScaleCb.checked) {
+      autoScaleCb.checked = false;
+      document.getElementById('fscalex0').readOnly = false;
+      document.getElementById('fscaledx').readOnly = false;
+      document.getElementById('fscaley0').readOnly = false;
+      document.getElementById('fscaledy').readOnly = false;
+    }
+
+    const m = this.getMousePos(e);
+    const gridW = this.NX * this.numpixel;
+    const gridH = this.NY * this.numpixel;
+
+    const fracX = (m.x - this.MX) / gridW;
+    const fracY = (this.MY + gridH - m.y) / gridH;
+
+    const xMouse = this.X0 + fracX * (this.NX * this.DX);
+    const yMouse = this.Y0 + fracY * (this.NY * this.DY);
+
+    const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
+
+    this.DX *= zoomFactor;
+    this.DY *= zoomFactor;
+
+    this.X0 = xMouse - fracX * (this.NX * this.DX);
+    this.Y0 = yMouse - fracY * (this.NY * this.DY);
+
+    document.getElementById('fscalex0').value = this.X0;
+    document.getElementById('fscaledx').value = this.DX;
+    document.getElementById('fscaley0').value = this.Y0;
+    document.getElementById('fscaledy').value = this.DY;
+
+    this.render();
   }
 
   handleMouseDown(e) {
@@ -579,7 +673,6 @@ class GraphApp {
     }
     ctx.stroke();
 
-    // Extend axes by 3 minor gridlines (18px = 0.6cm) to fit inside 1cm margin
     if (document.getElementById('fdrawarrows').checked) {
       const extension = 3 * (this.numpixel / 10);
       const yZeroPos = this.ytoSY(0);
@@ -609,7 +702,6 @@ class GraphApp {
     const gridW = this.NX * this.numpixel;
     const gridH = this.NY * this.numpixel;
 
-    // 11.6px renders exactly as 11pt font in MS Word
     ctx.font = '11.6px Arial';
     
     const dpSetting = document.getElementById('fdpselect').value;
@@ -693,7 +785,6 @@ class GraphApp {
 
     this.ctx.textAlign = 'center';
 
-    // 11.6px renders exactly as 11pt font in MS Word
     this.drawFormattedText(xLabelText, this.xNamePos.x, this.xNamePos.y, 11.6, enableGlow);
     this.drawFormattedText(yLabelText, this.yNamePos.x, this.yNamePos.y, 11.6, enableGlow);
   }

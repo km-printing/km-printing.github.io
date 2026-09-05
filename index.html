@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Graph Generator v5.0</title>
+  <title>Graph Generator v5.1</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
   <style>
@@ -146,11 +146,11 @@
       <div class="grid-2" style="margin-top: 6px;">
         <div>
           <div class="field-label">X Axis Name (Use *x* for italics)</div>
-          <input type="text" id="fxaxislabel" value="*x* / cm">
+          <input type="text" id="fxaxislabel" value="*x* (cm)">
         </div>
         <div>
           <div class="field-label">Y Axis Name (Use *y* for italics)</div>
-          <input type="text" id="fyaxislabel" value="*y* / cm">
+          <input type="text" id="fyaxislabel" value="*y* (cm)">
         </div>
       </div>
     </div>
@@ -316,7 +316,6 @@ class GraphApp {
 
   handleWheel(e) {
     e.preventDefault();
-    // Visual Canvas View Zooming (Does not affect graph mathematical settings)
     const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
     this.zoomLevel = Math.min(Math.max(0.4, this.zoomLevel * zoomFactor), 3.0);
     this.updateCanvasDisplaySize();
@@ -597,7 +596,7 @@ class GraphApp {
 
   drawArrowhead(x, y, angle) {
     const ctx = this.ctx;
-    const size = 7;
+    const size = 8;
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angle);
@@ -615,67 +614,117 @@ class GraphApp {
     const ctx = this.ctx;
     const gridW = this.NX * this.numpixel;
     const gridH = this.NY * this.numpixel;
+    const minorStep = this.numpixel / 10;
 
+    // 1. Draw Minor Gridlines (with 5th minor gridline hierarchy)
     if (document.getElementById('fdrawminorgridlines').checked) {
-      ctx.lineWidth = 0.5;
-      ctx.strokeStyle = '#444';
-      const minorStep = this.numpixel / 10;
+      const totalMinorY = Math.round(gridH / minorStep);
+      const totalMinorX = Math.round(gridW / minorStep);
 
-      ctx.beginPath();
-      for (let y = 0; y <= gridH; y += minorStep) {
-        ctx.moveTo(this.MX, this.MY + y + 0.5);
-        ctx.lineTo(this.MX + gridW + 0.5, this.MY + y + 0.5);
+      // Horizontal Minor Gridlines
+      for (let i = 0; i <= totalMinorY; i++) {
+        if (i % 10 === 0) continue; // Skip major gridlines
+        const y = this.MY + i * minorStep + 0.5;
+        ctx.beginPath();
+        if (i % 5 === 0) {
+          ctx.lineWidth = 0.8; // Halfway 5th minor gridline (thicker)
+          ctx.strokeStyle = '#444';
+        } else {
+          ctx.lineWidth = 0.4; // Standard minor gridline
+          ctx.strokeStyle = '#777';
+        }
+        ctx.moveTo(this.MX, y);
+        ctx.lineTo(this.MX + gridW, y);
+        ctx.stroke();
       }
-      for (let x = 0; x <= gridW; x += minorStep) {
-        ctx.moveTo(this.MX + x + 0.5, this.MY);
-        ctx.lineTo(this.MX + x + 0.5, this.MY + gridH);
+
+      // Vertical Minor Gridlines
+      for (let i = 0; i <= totalMinorX; i++) {
+        if (i % 10 === 0) continue; // Skip major gridlines
+        const x = this.MX + i * minorStep + 0.5;
+        ctx.beginPath();
+        if (i % 5 === 0) {
+          ctx.lineWidth = 0.8; // Halfway 5th minor gridline (thicker)
+          ctx.strokeStyle = '#444';
+        } else {
+          ctx.lineWidth = 0.4; // Standard minor gridline
+          ctx.strokeStyle = '#777';
+        }
+        ctx.moveTo(x, this.MY);
+        ctx.lineTo(x, this.MY + gridH);
+        ctx.stroke();
+      }
+    }
+
+    // 2. Draw Major Gridlines
+    if (document.getElementById('fdrawmajorgridlines').checked) {
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = '#000';
+      ctx.beginPath();
+
+      for (let i = 0; i <= this.NY; i++) {
+        const y = this.MY + i * this.numpixel + 0.5;
+        ctx.moveTo(this.MX, y);
+        ctx.lineTo(this.MX + gridW, y);
+      }
+
+      for (let i = 0; i <= this.NX; i++) {
+        const x = this.MX + i * this.numpixel + 0.5;
+        ctx.moveTo(x, this.MY);
+        ctx.lineTo(x, this.MY + gridH);
       }
       ctx.stroke();
     }
 
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = '#000';
-    ctx.beginPath();
-
-    for (let i = 0; i <= this.NY; i++) {
-      const y = this.MY + i * this.numpixel + 0.5;
-      if (document.getElementById('fdrawmajorgridlines').checked || (document.getElementById('fdrawaxes').checked && i === this.NY)) {
-        ctx.moveTo(this.MX, y); ctx.lineTo(this.MX + gridW + 0.5, y);
-      }
-      if (document.getElementById('fdrawticks').checked) {
+    // 3. Draw Ticks
+    if (document.getElementById('fdrawticks').checked) {
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = '#000';
+      ctx.beginPath();
+      for (let i = 0; i <= this.NY; i++) {
+        const y = this.MY + i * this.numpixel + 0.5;
         ctx.moveTo(this.MX - 4, y); ctx.lineTo(this.MX, y);
       }
-    }
-
-    for (let i = 0; i <= this.NX; i++) {
-      const x = this.MX + i * this.numpixel + 0.5;
-      if (document.getElementById('fdrawmajorgridlines').checked || (document.getElementById('fdrawaxes').checked && i === 0)) {
-        ctx.moveTo(x, this.MY); ctx.lineTo(x, this.MY + gridH);
-      }
-      if (document.getElementById('fdrawticks').checked) {
+      for (let i = 0; i <= this.NX; i++) {
+        const x = this.MX + i * this.numpixel + 0.5;
         ctx.moveTo(x, this.MY + gridH); ctx.lineTo(x, this.MY + gridH + 4);
       }
+      ctx.stroke();
     }
-    ctx.stroke();
+
+    // 4. Draw Prominent Zero Main Axes (Thicker at X=0 and Y=0) and Arrows
+    const extension = 3 * (this.numpixel / 10);
+    const yZeroPos = this.ytoSY(0);
+    const xZeroPos = this.xtoSX(0);
+
+    const hasXAxisZero = (yZeroPos >= this.MY && yZeroPos <= this.MY + gridH);
+    const hasYAxisZero = (xZeroPos >= this.MX && xZeroPos <= this.MX + gridW);
+
+    const xAxisY = hasXAxisZero ? yZeroPos : this.MY + gridH;
+    const yAxisX = hasYAxisZero ? xZeroPos : this.MX;
+
+    if (document.getElementById('fdrawaxes').checked) {
+      ctx.lineWidth = 2.4; // Thicker line for prominent main axes
+      ctx.strokeStyle = '#000';
+      ctx.beginPath();
+
+      // Main X-axis (at Y=0 or bottom edge)
+      ctx.moveTo(this.MX, xAxisY);
+      ctx.lineTo(this.MX + gridW + (document.getElementById('fdrawarrows').checked ? extension : 0), xAxisY);
+
+      // Main Y-axis (at X=0 or left edge)
+      ctx.moveTo(yAxisX, this.MY + gridH);
+      ctx.lineTo(yAxisX, this.MY - (document.getElementById('fdrawarrows').checked ? extension : 0));
+
+      ctx.stroke();
+    }
 
     if (document.getElementById('fdrawarrows').checked) {
-      const extension = 3 * (this.numpixel / 10);
-      const yZeroPos = this.ytoSY(0);
-      const xZeroPos = this.xtoSX(0);
-
-      const xArrowY = (yZeroPos >= this.MY && yZeroPos <= this.MY + gridH) ? yZeroPos : this.MY + gridH;
       const xArrowX = this.MX + gridW + extension;
+      const xArrowY = xAxisY;
 
-      const yArrowX = (xZeroPos >= this.MX && xZeroPos <= this.MX + gridW) ? xZeroPos : this.MX;
+      const yArrowX = yAxisX;
       const yArrowY = this.MY - extension;
-
-      ctx.beginPath();
-      ctx.moveTo(this.MX + gridW, xArrowY);
-      ctx.lineTo(xArrowX, xArrowY);
-
-      ctx.moveTo(yArrowX, this.MY);
-      ctx.lineTo(yArrowX, yArrowY);
-      ctx.stroke();
 
       this.drawArrowhead(xArrowX, xArrowY, 0);
       this.drawArrowhead(yArrowX, yArrowY, -Math.PI / 2);

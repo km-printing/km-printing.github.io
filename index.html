@@ -146,11 +146,11 @@
       <div class="grid-2" style="margin-top: 6px;">
         <div>
           <div class="field-label">X Axis Name (Use *x* for italics)</div>
-          <input type="text" id="fxaxislabel" value="*x* (cm)">
+          <input type="text" id="fxaxislabel" value="*x* / cm">
         </div>
         <div>
           <div class="field-label">Y Axis Name (Use *y* for italics)</div>
-          <input type="text" id="fyaxislabel" value="*y* (cm)">
+          <input type="text" id="fyaxislabel" value="*y* / cm">
         </div>
       </div>
     </div>
@@ -813,7 +813,7 @@ class GraphApp {
     const defaultYArrowY = this.MY - extension;
 
     if (!this.xNamePos) this.xNamePos = { x: defaultXArrowX - 5, y: defaultXArrowY - 9 };
-    if (!this.yNamePos) this.yNamePos = { x: defaultYArrowX - 10, y: defaultYArrowY + 10 };
+    if (!this.yNamePos) this.yNamePos = { x: defaultYArrowX - 13, y: defaultYArrowY + 10 };
 
     const enableGlow = document.getElementById('ftextglow').checked;
 
